@@ -1,0 +1,19 @@
+# IDE files
+.idea/
+.old/
+
+# Build output
+out/
+
+# Logs
+logs/
+
+# Node modules (if applicable for TypeScript project)
+node_modules/
+
+# Build artifacts
+dist/
+
+output/*
+
+.env

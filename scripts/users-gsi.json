@@ -1,0 +1,18 @@
+[
+  {
+    "IndexName": "isAnonymous-lastActiveAt-index",
+    "KeySchema": [
+      {
+        "AttributeName": "isAnonymous",
+        "KeyType": "HASH"
+      },
+      {
+        "AttributeName": "lastActiveAt",
+        "KeyType": "RANGE"
+      }
+    ],
+    "Projection": {
+      "ProjectionType": "ALL"
+    }
+  }
+]
