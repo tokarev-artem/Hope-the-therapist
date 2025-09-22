@@ -14,8 +14,6 @@ export interface DatabaseConfig {
   tables: {
     users: string;
     sessions: string;
-    progress: string;
-    settings: string;
   };
 }
 
@@ -33,9 +31,7 @@ export class DatabaseConnection {
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       tables: {
         users: process.env.DYNAMODB_USERS_TABLE || 'therapeutic-wave-users',
-        sessions: process.env.DYNAMODB_SESSIONS_TABLE || 'therapeutic-wave-sessions',
-        progress: process.env.DYNAMODB_PROGRESS_TABLE || 'therapeutic-wave-progress',
-        settings: process.env.DYNAMODB_SETTINGS_TABLE || 'therapeutic-wave-settings'
+        sessions: process.env.DYNAMODB_SESSIONS_TABLE || 'therapeutic-wave-sessions'
       },
       ...config
     };
@@ -91,7 +87,7 @@ export class DatabaseConnection {
   /**
    * Get table name by type
    */
-  getTableName(tableType: 'users' | 'sessions' | 'progress' | 'settings'): string {
+  getTableName(tableType: 'users' | 'sessions'): string {
     return this.config.tables[tableType];
   }
 

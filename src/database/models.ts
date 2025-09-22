@@ -71,85 +71,7 @@ export interface VoiceStressIndicators {
   volumeConsistency: number;
 }
 
-export interface Progress {
-  progressId: string; // Primary key - UUID
-  userId: string; // Foreign key to User
-  weekStartDate: string; // ISO date string (YYYY-MM-DD)
-  sessionsCount: number;
-  totalDuration: number; // Total duration in seconds
-  averageMoodImprovement: number; // Average mood improvement across sessions
-  averageStressReduction: number; // Average stress reduction across sessions
-  milestones: Milestone[];
-  trends: ProgressTrends;
-  encryptedNotes?: string; // Encrypted personal notes or observations
-}
 
-export interface Milestone {
-  milestoneId: string;
-  achievedAt: string; // ISO timestamp
-  type: 'session-count' | 'mood-improvement' | 'stress-reduction' | 'consistency' | 'custom';
-  title: string;
-  description: string;
-  value: number; // Numeric value associated with the milestone
-}
-
-export interface ProgressTrends {
-  moodTrend: 'improving' | 'stable' | 'declining';
-  stressTrend: 'improving' | 'stable' | 'declining';
-  engagementTrend: 'improving' | 'stable' | 'declining';
-  consistencyScore: number; // 0-100 based on regular usage
-  weeklyGrowth: number; // Percentage growth week over week
-}
-
-export interface Settings {
-  settingsId: string; // Primary key - userId for user-specific settings
-  userId: string; // Foreign key to User
-  waveSettings: WaveSettings;
-  audioSettings: AudioSettings;
-  privacySettings: PrivacySettings;
-  therapeuticSettings: TherapeuticSettings;
-  updatedAt: string; // ISO timestamp
-}
-
-export interface WaveSettings {
-  theme: string;
-  customColors?: {
-    baselineColor: string;
-    userInputColor: string;
-    botOutputColor: string;
-    backgroundColor: string;
-  };
-  motionIntensity: number;
-  animationSpeed: number;
-  reducedMotion: boolean;
-  waveComplexity: 'simple' | 'moderate' | 'complex';
-}
-
-export interface AudioSettings {
-  inputSensitivity: number; // 0.1 - 1.0
-  outputVolume: number; // 0.1 - 1.0
-  noiseReduction: boolean;
-  voiceEnhancement: boolean;
-  binauralBeats: boolean;
-  binauralFrequency?: number; // Hz for binaural beats
-}
-
-export interface PrivacySettings {
-  storeConversations: boolean;
-  encryptSensitiveData: boolean;
-  dataRetentionDays: number; // Days to retain data (0 = indefinite)
-  shareAnonymizedData: boolean; // For research purposes
-  allowAnalytics: boolean;
-}
-
-export interface TherapeuticSettings {
-  sessionGoals: string[]; // Array of therapeutic goals
-  triggerWords: string[]; // Words that might be triggering for the user
-  copingStrategies: string[]; // Preferred coping strategies
-  reminderFrequency: 'daily' | 'weekly' | 'monthly' | 'never';
-  progressSharing: boolean; // Share progress with healthcare provider
-  emergencyContact?: string; // Encrypted emergency contact info
-}
 
 // DynamoDB-specific interfaces for table operations
 export interface DynamoDBUser extends Omit<User, 'preferences' | 'isAnonymous'> {
@@ -167,26 +89,10 @@ export interface DynamoDBSession extends Omit<Session, 'emotionalState' | 'waveP
   GSI1SK: string; // startTime for sorting sessions chronologically
 }
 
-export interface DynamoDBProgress extends Omit<Progress, 'milestones' | 'trends'> {
-  milestones: string; // JSON stringified Milestone[]
-  trends: string; // JSON stringified ProgressTrends
-  GSI1PK: string; // userId for querying progress by user
-  GSI1SK: string; // weekStartDate for sorting progress chronologically
-}
 
-export interface DynamoDBSettings extends Omit<Settings, 'waveSettings' | 'audioSettings' | 'privacySettings' | 'therapeuticSettings'> {
-  waveSettings: string; // JSON stringified WaveSettings
-  audioSettings: string; // JSON stringified AudioSettings
-  privacySettings: string; // JSON stringified PrivacySettings
-  therapeuticSettings: string; // JSON stringified TherapeuticSettings
-}
 
 // Utility types for database operations
 export type CreateUserInput = Omit<User, 'userId' | 'createdAt' | 'lastActiveAt'>;
 export type UpdateUserInput = Partial<Omit<User, 'userId' | 'createdAt'>>;
 export type CreateSessionInput = Omit<Session, 'sessionId' | 'startTime'>;
 export type UpdateSessionInput = Partial<Omit<Session, 'sessionId' | 'userId' | 'startTime'>>;
-export type CreateProgressInput = Omit<Progress, 'progressId'>;
-export type UpdateProgressInput = Partial<Omit<Progress, 'progressId' | 'userId' | 'weekStartDate'>>;
-export type CreateSettingsInput = Omit<Settings, 'settingsId' | 'updatedAt'>;
-export type UpdateSettingsInput = Partial<Omit<Settings, 'settingsId' | 'userId'>>;

@@ -31,12 +31,8 @@ export {
 export {
   UsersRepository,
   SessionsRepository,
-  ProgressRepository,
-  SettingsRepository,
   usersRepository,
-  sessionsRepository,
-  progressRepository,
-  settingsRepository
+  sessionsRepository
 } from './repositories';
 
 // Table schemas

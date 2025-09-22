@@ -207,7 +207,7 @@ DYNAMODB_PROGRESS_TABLE=therapeutic-wave-progress
 DYNAMODB_SETTINGS_TABLE=therapeutic-wave-settings
 
 # Encryption
-ENCRYPTION_KEY=your-secure-encryption-key
+# ENCRYPTION_KEY=optional-for-demo
 ```
 
 ### Bedrock Model Configuration

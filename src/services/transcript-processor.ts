@@ -7,7 +7,6 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { fromIni } from '@aws-sdk/credential-providers';
 import {
   sessionsRepository,
-  progressRepository,
   encryptSensitiveData,
   decryptSensitiveData,
   sanitizeBeforeEncryption
@@ -223,11 +222,8 @@ Focus on:
         return this.getDefaultProgressAnalysis();
       }
 
-      // Get progress records
-      const progressRecords = await progressRepository.getProgressByUserId(userId, 4); // Last 4 weeks
-
       // Analyze trends using AI
-      const progressPrompt = this.buildProgressAnalysisPrompt(recentSessions, progressRecords);
+      const progressPrompt = this.buildProgressAnalysisPrompt(recentSessions);
 
       const command = new InvokeModelCommand({
         modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
@@ -259,7 +255,7 @@ Focus on:
   /**
    * Build progress analysis prompt
    */
-  private buildProgressAnalysisPrompt(sessions: any[], progressRecords: any[]): string {
+  private buildProgressAnalysisPrompt(sessions: any[]): string {
     const sessionSummaries = sessions.map(s => ({
       date: s.startTime,
       duration: s.duration,
@@ -274,9 +270,6 @@ Analyze this user's therapeutic progress based on their session history and prov
 
 Recent Sessions:
 ${JSON.stringify(sessionSummaries, null, 2)}
-
-Progress Records:
-${JSON.stringify(progressRecords, null, 2)}
 
 Please provide a JSON response with this structure:
 

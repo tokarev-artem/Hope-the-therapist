@@ -7,7 +7,7 @@ import {
   initializeDatabaseConnection, 
   checkDatabaseHealth,
   usersRepository,
-  settingsRepository,
+
   validateEncryptionConfig
 } from './index';
 
@@ -61,50 +61,10 @@ async function testDatabaseConnection(): Promise<void> {
       });
       console.log(`   ✅ User created with ID: ${testUser.userId}`);
 
-      // Test creating settings for the user
-      console.log('   Creating test settings...');
-      const testSettings = await settingsRepository.upsertSettings({
-        userId: testUser.userId,
-        waveSettings: {
-          theme: 'ocean-calm',
-          motionIntensity: 0.8,
-          animationSpeed: 1.0,
-          reducedMotion: false,
-          waveComplexity: 'moderate'
-        },
-        audioSettings: {
-          inputSensitivity: 0.6,
-          outputVolume: 0.8,
-          noiseReduction: true,
-          voiceEnhancement: false,
-          binauralBeats: false
-        },
-        privacySettings: {
-          storeConversations: true,
-          encryptSensitiveData: true,
-          dataRetentionDays: 30,
-          shareAnonymizedData: false,
-          allowAnalytics: true
-        },
-        therapeuticSettings: {
-          sessionGoals: ['reduce-anxiety', 'improve-mood'],
-          triggerWords: [],
-          copingStrategies: ['deep-breathing', 'mindfulness'],
-          reminderFrequency: 'weekly',
-          progressSharing: false
-        }
-      });
-      console.log(`   ✅ Settings created for user: ${testSettings.userId}`);
-
       // Test retrieving the user
       console.log('   Retrieving test user...');
       const retrievedUser = await usersRepository.getUserById(testUser.userId);
       console.log(`   ✅ User retrieved: ${retrievedUser ? 'Success' : 'Failed'}`);
-
-      // Test retrieving settings
-      console.log('   Retrieving test settings...');
-      const retrievedSettings = await settingsRepository.getSettingsByUserId(testUser.userId);
-      console.log(`   ✅ Settings retrieved: ${retrievedSettings ? 'Success' : 'Failed'}`);
 
       // Clean up test data
       console.log('   Cleaning up test data...');

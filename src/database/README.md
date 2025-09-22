@@ -129,7 +129,7 @@ const session = await sessionsRepository.createSession({
 ```bash
 NODE_ENV=development
 AWS_REGION=us-east-1
-ENCRYPTION_KEY=development-key-change-in-production
+# ENCRYPTION_KEY=optional-custom-key-for-production
 
 # Table names (created via CDK/Terraform)
 DYNAMODB_USERS_TABLE=therapeutic-wave-users-dev
@@ -142,7 +142,7 @@ DYNAMODB_SETTINGS_TABLE=therapeutic-wave-settings-dev
 ```bash
 NODE_ENV=production
 AWS_REGION=us-east-1
-ENCRYPTION_KEY=your-secure-production-key
+# ENCRYPTION_KEY=your-secure-production-key
 
 # Table names (created via CDK/Terraform)
 DYNAMODB_USERS_TABLE=therapeutic-wave-users-prod
@@ -198,7 +198,8 @@ export async function migrateV1ToV2() {
    - Use `--force` flag to recreate: `npm run db:setup -- --force`
 
 4. **Encryption errors:**
-   - Verify ENCRYPTION_KEY is set
+   - For demo: encryption works with default keys (no setup needed)
+   - For production: set custom ENCRYPTION_KEY environment variable
    - Run encryption test: `npm run db:test`
 
 ### Debug Mode

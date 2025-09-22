@@ -5,9 +5,7 @@
 
 import { 
   usersRepository, 
-  sessionsRepository, 
-  progressRepository, 
-  settingsRepository 
+  sessionsRepository
 } from '../database';
 import { transcriptProcessor, ProgressAnalysis } from './transcript-processor';
 
@@ -374,12 +372,8 @@ Please:
    * Get progress goals for user
    */
   private async getProgressGoals(userId: string): Promise<string[]> {
-    try {
-      const settings = await settingsRepository.getSettingsByUserId(userId);
-      return settings?.therapeuticSettings.sessionGoals || ['general-wellbeing'];
-    } catch (error) {
-      return ['general-wellbeing'];
-    }
+    // Return default goals since settings table is removed
+    return ['general-wellbeing'];
   }
 
   /**

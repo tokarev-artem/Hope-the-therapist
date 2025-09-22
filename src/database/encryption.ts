@@ -21,12 +21,9 @@ function getEncryptionKey(): Buffer {
     return createHash('sha256').update(keyString).digest();
   }
   
-  // For development, generate a consistent key based on a seed
-  const seed = process.env.NODE_ENV === 'production' 
-    ? randomBytes(KEY_LENGTH).toString('hex')
-    : 'development-seed-key-therapeutic-wave-interface';
-    
-  return createHash('sha256').update(seed).digest();
+  // For demo/development, use a consistent default key
+  const defaultSeed = 'demo-therapeutic-wave-interface-encryption-key';
+  return createHash('sha256').update(defaultSeed).digest();
 }
 
 /**

@@ -13,7 +13,7 @@ window.socket = socket;
 window.addEventListener('sessionContextUpdated', (event) => {
     console.log('📊 Session context received in main.js:', event.detail);
     sessionContext = event.detail;
-    
+
     // Initialize session now that we have context
     if (!sessionInitialized) {
         console.log('🚀 Initializing session with context...');

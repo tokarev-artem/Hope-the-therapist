@@ -76,7 +76,7 @@ export async function setupDatabase(options: SetupOptions = {}): Promise<void> {
 
     // Create tables (if not using CDK/Terraform)
     for (const schema of schemasToCreate) {
-      const tableType = schema.tableName as 'users' | 'sessions' | 'progress' | 'settings';
+      const tableType = schema.tableName as 'users' | 'sessions';
       const fullTableName = db.getTableName(tableType);
       
       // Check if table exists
@@ -123,7 +123,7 @@ export async function setupDatabase(options: SetupOptions = {}): Promise<void> {
     console.log('\n📊 Setup Summary:');
     console.log(`   Environment: ${connectionInfo.isLocal ? 'Local Development' : 'AWS Production'}`);
     console.log(`   Tables configured: ${Object.keys(connectionInfo.tables).length}`);
-    console.log(`   Encryption: ${process.env.ENCRYPTION_KEY ? 'Custom key' : 'Default key'}`);
+    console.log(`   Encryption: ${process.env.ENCRYPTION_KEY ? 'Custom key' : 'Default demo key'}`);
     
     console.log('\n💡 Production Deployment:');
     console.log('   - Use CDK or Terraform to create tables');

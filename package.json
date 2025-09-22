@@ -7,17 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "cli": "ts-node src/index-cli.ts",
-    "dev": "ts-node src/server.ts",
-    "dynamodb:local": "dynamodb-local",
-    "db:setup": "ts-node src/database/setup.ts",
-    "db:test": "ts-node src/database/test-connection.ts",
-    "db:config": "ts-node src/database/test-config.ts",
-    "test:workflow": "ts-node src/services/integration-example.ts",
-    "db:create": "./scripts/create-dynamodb-tables.sh",
-    "db:create-simple": "./scripts/create-simple-tables.sh",
-    "db:delete": "./scripts/delete-dynamodb-tables.sh",
-    "db:list": "./scripts/list-dynamodb-tables.sh",
-    "db:quick-setup": "./scripts/quick-setup.sh"
+    "dev": "ts-node src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -32,7 +22,6 @@
     "@smithy/types": "^4.1.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.9",
-
     "dotenv": "^16.3.1",
     "express": "^4.21.2",
     "pnpm": "^10.6.1",
