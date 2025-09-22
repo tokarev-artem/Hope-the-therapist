@@ -29,34 +29,12 @@ The system consists of a server that handles the bidirectional streaming and AWS
 - AWS CLI configured with appropriate credentials
 - Modern web browser with WebAudio API support
 
-**Required packages:**
-
-```json
-{
-  "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.785",
-    "@aws-sdk/client-bedrock-agent-runtime": "^3.782",
-    "@aws-sdk/credential-providers": "^3.782",
-    "@smithy/node-http-handler": "^4.0.4",
-    "@smithy/types": "^4.1.0",
-    "@types/express": "^5.0.0",
-    "@types/node": "^22.13.9",
-    "dotenv": "^16.3.1",
-    "express": "^4.21.2",
-    "pnpm": "^10.6.1",
-    "rxjs": "^7.8.2",
-    "socket.io": "^4.8.1",
-    "ts-node": "^10.9.2",
-    "uuid": "^11.1.0"
-  }
-}
-```
 
 ### Installation
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd <repository-name>
+git clone https://github.com/tokarev-artem/Hope-the-therapist.git
+cd Hope-the-therapist
 ```
 
 2. Install dependencies:
@@ -67,7 +45,9 @@ npm install
 3. Configure AWS credentials:
 ```bash
 # Configure AWS CLI with your credentials
-aws configure --profile bedrock-test
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+export AWS_SESSION_TOKEN=""
 ```
 
 4. Build the TypeScript code:
@@ -87,52 +67,6 @@ http://localhost:3000
 ```
 
 3. Grant microphone permissions when prompted.
-
-### More Detailed Examples
-1. Starting a conversation:
-```javascript
-// Initialize audio context and request microphone access
-await initAudio();
-// Click the Start button to begin streaming
-startButton.onclick = startStreaming;
-```
-
-2. Customizing the system prompt:
-```javascript
-const SYSTEM_PROMPT = "You are a friend. The user and you will engage in a spoken...";
-socket.emit('systemPrompt', SYSTEM_PROMPT);
-```
-
-### Troubleshooting
-1. Microphone Access Issues
-- Problem: Browser shows "Permission denied for microphone"
-- Solution: 
-  ```javascript
-  // Check if microphone permissions are granted
-  const permissions = await navigator.permissions.query({ name: 'microphone' });
-  if (permissions.state === 'denied') {
-    console.error('Microphone access is required');
-  }
-  ```
-
-2. Audio Playback Issues
-- Problem: No audio output
-- Solution:
-  ```javascript
-  // Verify AudioContext is initialized
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
-  ```
-
-3. Connection Issues
-- Check server logs for connection status
-- Verify WebSocket connection:
-  ```javascript
-  socket.on('connect_error', (error) => {
-    console.error('Connection failed:', error);
-  });
-  ```
 
 ## Data Flow
 The application processes audio input through a pipeline that converts speech to text, processes it with AWS Bedrock, and returns both text and audio responses.
