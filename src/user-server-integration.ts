@@ -432,58 +432,60 @@ export function addUserManagement(socket: any) {
     try {
       console.log('Processing user:', data);
 
-      // First, check if this is a returning user by looking for existing sessions
-      console.log('Checking for existing user with frontend ID:', data.userId);
-      let existingUser = null;
-      
-      try {
-        // Try to find existing sessions for this frontend UUID
-        const existingSessions = await sessionsRepository.getSessionsByUserId(data.userId, 1);
-        if (existingSessions.length > 0) {
-          console.log('🔄 Found existing sessions - this is a returning user!');
-          existingUser = {
-            userId: data.userId, // Use frontend UUID as user ID for consistency
-            userName: data.userName,
-            isReturning: true
-          };
-        }
-      } catch (error) {
-        console.log('No existing sessions found, treating as new user');
-      }
+      // Always use frontend UUID as canonical userId in Users table
+      const canonicalUserId = data.userId;
 
-      let user;
-      if (existingUser) {
-        // Returning user - use existing data
-        console.log('✅ Returning user recognized:', data.userId);
-        user = existingUser;
+      // Check if user already exists
+      let user = await usersRepository.getUserById(canonicalUserId);
+      let isReturning = false;
+
+      if (user) {
+        console.log('✅ Existing user found in users table:', canonicalUserId);
+        isReturning = true;
       } else {
-        // New user - create in database
-        console.log('Creating new user in database with frontend ID:', data.userId);
-        user = await usersRepository.createUser({
-          isAnonymous: data.isAnonymous,
-          userName: data.userName, // Store the user name
-          frontendUserId: data.userId, // Store the frontend UUID for reference
-          preferences: {
-            theme: 'ocean-calm',
-            motionIntensity: 0.8,
-            colorIntensity: 0.7,
-            animationSpeed: 1.0,
-            reducedMotion: false,
-            highContrast: false,
-            audioSensitivity: 0.6
+        // Create user with conditional put to avoid duplicates
+        console.log('Creating new user in database with frontend ID:', canonicalUserId);
+        try {
+          user = await usersRepository.createUserWithId(canonicalUserId, {
+            isAnonymous: data.isAnonymous,
+            userName: data.userName,
+            frontendUserId: data.userId,
+            preferences: {
+              theme: 'ocean-calm',
+              motionIntensity: 0.8,
+              colorIntensity: 0.7,
+              animationSpeed: 1.0,
+              reducedMotion: false,
+              highContrast: false,
+              audioSensitivity: 0.6
+            }
+          });
+          console.log('✅ New user created in database:', user.userId);
+        } catch (err: any) {
+          // If another request created the user concurrently
+          if (err?.name === 'ConditionalCheckFailedException') {
+            console.log('⚠️ User already existed due to race; fetching existing:', canonicalUserId);
+            user = await usersRepository.getUserById(canonicalUserId);
+            isReturning = true;
+          } else {
+            throw err;
           }
-        });
-        console.log('✅ New user created in database:', user.userId);
+        }
       }
       
       console.log('✅ User name:', data.userName || 'Anonymous');
       console.log('✅ Frontend UUID:', data.userId);
 
+      // Ensure we have a user record
+      if (!user) {
+        throw new Error('Failed to create or retrieve user');
+      }
+
       // Store user session info with both IDs
       activeUserSessions.set(socket.id, {
         userId: user.userId, // Use consistent user ID (frontend UUID)
         userName: data.userName,
-        frontendUserId: data.userId // Frontend UUID
+        frontendUserId: data.userId
       });
 
       console.log('✅ User session created:', user.userId);
@@ -491,7 +493,7 @@ export function addUserManagement(socket: any) {
         userId: user.userId, // Return the user ID
         frontendUserId: data.userId, // Also return the frontend UUID
         userName: data.userName,
-        isReturning: existingUser ? true : false,
+        isReturning,
         success: true,
         databaseConnected: true
       });

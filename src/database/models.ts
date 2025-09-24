@@ -85,8 +85,9 @@ export interface DynamoDBSession extends Omit<Session, 'emotionalState' | 'waveP
   emotionalState: string; // JSON stringified EmotionalState
   wavePatterns: string; // JSON stringified WavePatternData[]
   therapeuticMetrics: string; // JSON stringified TherapeuticMetrics
-  GSI1PK: string; // userId for querying sessions by user
-  GSI1SK: string; // startTime for sorting sessions chronologically
+  // Optional legacy/index support keys (present in existing deployments)
+  GSI1PK?: string; // Partition key for GSI (e.g., 'USER#<userId>')
+  GSI1SK?: string; // Sort key for GSI (e.g., startTime)
 }
 
 
