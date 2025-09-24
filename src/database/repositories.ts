@@ -3,16 +3,16 @@
  * Provides CRUD operations for all data models with encryption support
  */
 
-import { 
-  PutCommand, 
-  GetCommand, 
-  UpdateCommand, 
-  DeleteCommand, 
+import {
+  PutCommand,
+  GetCommand,
+  UpdateCommand,
+  DeleteCommand,
   QueryCommand
 } from '@aws-sdk/lib-dynamodb';
 import { getDatabaseConnection } from './connection';
-import { 
-  User, 
+import {
+  User,
   Session,
   DynamoDBUser,
   DynamoDBSession,
@@ -21,10 +21,10 @@ import {
   CreateSessionInput,
   UpdateSessionInput
 } from './models';
-import { 
-  encryptSensitiveData, 
-  decryptSensitiveData, 
-  generateSecureUserId, 
+import {
+  encryptSensitiveData,
+  decryptSensitiveData,
+  generateSecureUserId,
   generateSecureSessionId,
   sanitizeBeforeEncryption
 } from './encryption';
@@ -120,7 +120,7 @@ export class UsersRepository extends BaseRepository {
       updateExpressions.push('#lastActiveAt = :lastActiveAt');
       expressionAttributeNames['#lastActiveAt'] = 'lastActiveAt';
       expressionAttributeValues[':lastActiveAt'] = input.lastActiveAt;
-      
+
       // Update GSI sort key as well
       updateExpressions.push('GSI1SK = :lastActiveAt');
     }
@@ -355,23 +355,28 @@ export class SessionsRepository extends BaseRepository {
    * Get sessions by user ID
    */
   async getSessionsByUserId(userId: string, limit: number = 50): Promise<Session[]> {
-    const command = new QueryCommand({
-      TableName: this.tableName,
-      IndexName: 'userId-startTime-index',
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId
-      },
-      ScanIndexForward: false, // Most recent first
-      Limit: limit
-    });
+    try {
+      const command = new QueryCommand({
+        TableName: this.tableName,
+        IndexName: 'userId-startTime-index',
+        KeyConditionExpression: 'GSI1PK = :userId',
+        ExpressionAttributeValues: {
+          ':userId': `USER#${userId}` 
+        },
+        ScanIndexForward: false,
+        Limit: limit
+      });
 
-    const response = await this.docClient.send(command);
-    if (!response.Items) {
-      return [];
+      const response = await this.docClient.send(command);
+      if (!response.Items) {
+        return [];
+      }
+
+      return response.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+    } catch (error) {
+      console.error('Error fetching sessions by userId:', error);
+      throw error;
     }
-
-    return response.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
   }
 
   /**
