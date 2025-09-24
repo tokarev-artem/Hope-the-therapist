@@ -91,6 +91,46 @@ export class UsersRepository extends BaseRepository {
   }
 
   /**
+   * Create a new user with a specific userId (e.g., frontend UUID) and prevent duplicates
+   * Uses a conditional put to ensure we don't overwrite existing users
+   */
+  async createUserWithId(userId: string, input: CreateUserInput): Promise<User> {
+    const now = this.getCurrentTimestamp();
+
+    const user: User = {
+      userId,
+      createdAt: now,
+      lastActiveAt: now,
+      ...input
+    };
+
+    // Convert to DynamoDB format
+    const dynamoUser: DynamoDBUser = {
+      ...user,
+      isAnonymous: user.isAnonymous.toString(),
+      preferences: JSON.stringify(user.preferences),
+      GSI1PK: user.isAnonymous.toString(),
+      GSI1SK: user.lastActiveAt
+    };
+
+    // Encrypt sensitive data if present
+    if (user.encryptedData) {
+      const sanitized = sanitizeBeforeEncryption(user.encryptedData);
+      dynamoUser.encryptedData = encryptSensitiveData(sanitized);
+    }
+
+    const command = new PutCommand({
+      TableName: this.tableName,
+      Item: dynamoUser,
+      ConditionExpression: 'attribute_not_exists(#pk)',
+      ExpressionAttributeNames: { '#pk': 'userId' }
+    });
+
+    await this.docClient.send(command);
+    return user;
+  }
+
+  /**
    * Get user by ID
    */
   async getUserById(userId: string): Promise<User | null> {
@@ -242,6 +282,7 @@ export class SessionsRepository extends BaseRepository {
       emotionalState: JSON.stringify(session.emotionalState),
       wavePatterns: JSON.stringify(session.wavePatterns),
       therapeuticMetrics: JSON.stringify(session.therapeuticMetrics),
+      // Write legacy GSI attributes for compatibility with existing deployments
       GSI1PK: session.userId,
       GSI1SK: session.startTime
     };
@@ -355,28 +396,75 @@ export class SessionsRepository extends BaseRepository {
    * Get sessions by user ID
    */
   async getSessionsByUserId(userId: string, limit: number = 50): Promise<Session[]> {
-    try {
-      const command = new QueryCommand({
-        TableName: this.tableName,
-        IndexName: 'userId-startTime-index',
-        KeyConditionExpression: 'GSI1PK = :userId',
-        ExpressionAttributeValues: {
-          ':userId': `USER#${userId}` 
-        },
-        ScanIndexForward: false,
-        Limit: limit
-      });
+    const indexCandidates = [
+      'userId-startTime-index',
+      'GSI1PK-GSI1SK-index',
+      'UserIdStartTimeIndex',
+      'userIdStartTimeIndex'
+    ];
 
-      const response = await this.docClient.send(command);
-      if (!response.Items) {
-        return [];
+    // Try all index names with both key schema variants
+    for (const indexName of indexCandidates) {
+      // Variant A: Using userId key
+      try {
+        const cmd = new QueryCommand({
+          TableName: this.tableName,
+          IndexName: indexName,
+          KeyConditionExpression: '#uid = :userId',
+          ExpressionAttributeNames: { '#uid': 'userId' },
+          ExpressionAttributeValues: { ':userId': userId },
+          ScanIndexForward: false,
+          Limit: limit
+        });
+        const resp = await this.docClient.send(cmd);
+        if (resp.Items && resp.Items.length > 0) {
+          return resp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+        }
+      } catch (e: any) {
+        // proceed to variant B
       }
 
-      return response.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
-    } catch (error) {
-      console.error('Error fetching sessions by userId:', error);
-      throw error;
+      // Variant B: Using legacy GSI1PK (no prefix)
+      try {
+        const cmdLegacy = new QueryCommand({
+          TableName: this.tableName,
+          IndexName: indexName,
+          KeyConditionExpression: '#pk = :pk',
+          ExpressionAttributeNames: { '#pk': 'GSI1PK' },
+          ExpressionAttributeValues: { ':pk': userId },
+          ScanIndexForward: false,
+          Limit: limit
+        });
+        const legacyResp = await this.docClient.send(cmdLegacy);
+        if (legacyResp.Items && legacyResp.Items.length > 0) {
+          return legacyResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+        }
+      } catch (e: any) {
+        // proceed to variant C
+      }
+
+      // Variant C: Using legacy GSI1PK with USER# prefix
+      try {
+        const cmdPref = new QueryCommand({
+          TableName: this.tableName,
+          IndexName: indexName,
+          KeyConditionExpression: '#pk = :pk',
+          ExpressionAttributeNames: { '#pk': 'GSI1PK' },
+          ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+          ScanIndexForward: false,
+          Limit: limit
+        });
+        const prefResp = await this.docClient.send(cmdPref);
+        if (prefResp.Items && prefResp.Items.length > 0) {
+          return prefResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+        }
+      } catch (e: any) {
+        // try next index candidate
+      }
     }
+
+    // If we reach here, nothing found
+    return [];
   }
 
   /**
