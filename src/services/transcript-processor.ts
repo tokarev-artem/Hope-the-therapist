@@ -103,25 +103,27 @@ export class TranscriptProcessor {
 
     try {
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0', // Fast and cost-effective for summaries
+        modelId: 'amazon.nova-micro-v1:0',
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ]
+          inputText: prompt,
+          textGenerationConfig: {
+            maxTokenCount: 1000,
+            temperature: 0.5,
+            topP: 0.9,
+            stopSequences: []
+          }
         })
       });
 
       const response = await this.bedrockClient.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-
-      return this.parseAISummary(responseBody.content[0].text);
+      const outputText = responseBody?.results?.[0]?.outputText || '';
+      if (!outputText) {
+        throw new Error('Empty response from Nova Micro');
+      }
+      return this.parseAISummary(outputText);
 
     } catch (error) {
       console.error('Error generating AI summary:', error);
@@ -226,25 +228,28 @@ Focus on:
       const progressPrompt = this.buildProgressAnalysisPrompt(recentSessions);
 
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        modelId: 'amazon.nova-micro-v1:0',
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: 800,
-          messages: [
-            {
-              role: 'user',
-              content: progressPrompt
-            }
-          ]
+          inputText: progressPrompt,
+          textGenerationConfig: {
+            maxTokenCount: 800,
+            temperature: 0.5,
+            topP: 0.9,
+            stopSequences: []
+          }
         })
       });
 
       const response = await this.bedrockClient.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+      const outputText = responseBody?.results?.[0]?.outputText || '';
+      if (!outputText) {
+        throw new Error('Empty response from Nova Micro');
+      }
 
-      return this.parseProgressAnalysis(responseBody.content[0].text);
+      return this.parseProgressAnalysis(outputText);
 
     } catch (error) {
       console.error('Error analyzing user progress:', error);
