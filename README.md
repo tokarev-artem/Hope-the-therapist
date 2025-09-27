@@ -72,9 +72,12 @@ The system consists of a server that handles the bidirectional streaming and AWS
 ```
 
 ## Usage Instructions
+
 ### Prerequisites
 - Node.js (v14 or higher)
 - AWS Account with Bedrock access
+  - `amazon.nova-micro-v1:0` model
+  - `amazon.nova-sonic-v1:0` model
 - AWS CLI configured with appropriate credentials
 - Modern web browser with WebAudio API support
 

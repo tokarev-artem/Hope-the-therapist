@@ -41,7 +41,7 @@ The therapeutic services provide:
                       │
         ┌─────────────▼─────────────┐
         │      AWS Bedrock          │
-        │  (Claude 3 Haiku)         │
+        │     (Nova micro)          │
         │  • Summarization          │
         │  • Progress Analysis      │
         │  • Recommendations        │
@@ -56,7 +56,7 @@ Handles AI-powered analysis of therapy session transcripts.
 
 **Key Features:**
 - Secure transcript storage with encryption
-- AI-powered summarization using AWS Bedrock (Claude 3 Haiku)
+- AI-powered summarization using AWS Bedrock (Nova micro)
 - Emotional insights extraction
 - Therapeutic progress analysis
 - Continuity notes for next sessions
@@ -152,7 +152,7 @@ const completionData = await sessionManager.completeSession(
 
 ### Bedrock Models Used
 
-**Claude 3 Haiku** - Primary model for:
+**Nova micro** - Primary model for:
 - Fast, cost-effective summarization
 - Emotional insights extraction
 - Progress analysis
@@ -203,15 +203,13 @@ AWS_REGION=us-east-1
 # DynamoDB Tables
 DYNAMODB_USERS_TABLE=therapeutic-wave-users
 DYNAMODB_SESSIONS_TABLE=therapeutic-wave-sessions
-DYNAMODB_PROGRESS_TABLE=therapeutic-wave-progress
-DYNAMODB_SETTINGS_TABLE=therapeutic-wave-settings
 
 # Encryption
 # ENCRYPTION_KEY=optional-for-demo
 ```
 
 ### Bedrock Model Configuration
-- **Model**: `anthropic.claude-3-haiku-20240307-v1:0`
+- **Model**: `amazon.nova-micro-v1:0`
 - **Max Tokens**: 1000 (summaries), 800 (progress analysis)
 - **Temperature**: Default (balanced creativity/consistency)
 
@@ -254,7 +252,7 @@ await testWorkflow();
 ### AI Processing
 - **Async Processing**: Transcript analysis runs asynchronously
 - **Fallback Handling**: Graceful degradation if AI fails
-- **Cost Optimization**: Uses efficient Haiku model
+- **Cost Optimization**: Uses efficient Nova micro model
 - **Caching**: User context cached for session duration
 
 ### Database Optimization
