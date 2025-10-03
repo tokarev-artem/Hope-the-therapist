@@ -26,7 +26,9 @@ import {
   decryptSensitiveData,
   generateSecureUserId,
   generateSecureSessionId,
-  sanitizeBeforeEncryption
+  sanitizeBeforeEncryption,
+  encryptTranscriptWithKMS,
+  decryptTranscriptWithKMS
 } from './encryption';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -287,10 +289,10 @@ export class SessionsRepository extends BaseRepository {
       GSI1SK: session.startTime
     };
 
-    // Encrypt transcript if present
+    // Encrypt transcript if present using KMS
     if (session.encryptedTranscript) {
       const sanitized = sanitizeBeforeEncryption(session.encryptedTranscript);
-      dynamoSession.encryptedTranscript = encryptSensitiveData(sanitized);
+      dynamoSession.encryptedTranscript = await encryptTranscriptWithKMS(sanitized);
     }
 
     const command = new PutCommand({
@@ -316,7 +318,7 @@ export class SessionsRepository extends BaseRepository {
       return null;
     }
 
-    return this.convertFromDynamoSession(response.Item as DynamoDBSession);
+    return await this.convertFromDynamoSession(response.Item as DynamoDBSession);
   }
 
   /**
@@ -368,7 +370,7 @@ export class SessionsRepository extends BaseRepository {
       const sanitized = sanitizeBeforeEncryption(input.encryptedTranscript);
       updateExpressions.push('#encryptedTranscript = :encryptedTranscript');
       expressionAttributeNames['#encryptedTranscript'] = 'encryptedTranscript';
-      expressionAttributeValues[':encryptedTranscript'] = encryptSensitiveData(sanitized);
+      expressionAttributeValues[':encryptedTranscript'] = await encryptTranscriptWithKMS(sanitized);
     }
 
     if (updateExpressions.length === 0) {
@@ -389,7 +391,7 @@ export class SessionsRepository extends BaseRepository {
       return null;
     }
 
-    return this.convertFromDynamoSession(response.Attributes as DynamoDBSession);
+    return await this.convertFromDynamoSession(response.Attributes as DynamoDBSession);
   }
 
   /**
@@ -418,7 +420,7 @@ export class SessionsRepository extends BaseRepository {
         });
         const resp = await this.docClient.send(cmd);
         if (resp.Items && resp.Items.length > 0) {
-          return resp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+          return await Promise.all(resp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession)));
         }
       } catch (e: any) {
         // proceed to variant B
@@ -437,7 +439,7 @@ export class SessionsRepository extends BaseRepository {
         });
         const legacyResp = await this.docClient.send(cmdLegacy);
         if (legacyResp.Items && legacyResp.Items.length > 0) {
-          return legacyResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+          return await Promise.all(legacyResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession)));
         }
       } catch (e: any) {
         // proceed to variant C
@@ -456,7 +458,7 @@ export class SessionsRepository extends BaseRepository {
         });
         const prefResp = await this.docClient.send(cmdPref);
         if (prefResp.Items && prefResp.Items.length > 0) {
-          return prefResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession));
+          return await Promise.all(prefResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession)));
         }
       } catch (e: any) {
         // try next index candidate
@@ -480,7 +482,7 @@ export class SessionsRepository extends BaseRepository {
     return true;
   }
 
-  private convertFromDynamoSession(dynamoSession: DynamoDBSession): Session {
+  private async convertFromDynamoSession(dynamoSession: DynamoDBSession): Promise<Session> {
     const session: Session = {
       ...dynamoSession,
       emotionalState: JSON.parse(dynamoSession.emotionalState),
@@ -488,10 +490,10 @@ export class SessionsRepository extends BaseRepository {
       therapeuticMetrics: JSON.parse(dynamoSession.therapeuticMetrics)
     };
 
-    // Decrypt transcript if present
+    // Decrypt transcript if present using KMS
     if (dynamoSession.encryptedTranscript) {
       try {
-        session.encryptedTranscript = decryptSensitiveData(dynamoSession.encryptedTranscript);
+        session.encryptedTranscript = await decryptTranscriptWithKMS(dynamoSession.encryptedTranscript);
       } catch (error) {
         console.error('Failed to decrypt session transcript:', error);
         delete session.encryptedTranscript;

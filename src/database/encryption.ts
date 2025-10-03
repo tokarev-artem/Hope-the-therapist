@@ -4,11 +4,17 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+import { KMSClient, EncryptCommand, DecryptCommand } from '@aws-sdk/client-kms';
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 16; // 128 bits
 const TAG_LENGTH = 16; // 128 bits
+
+// Initialize KMS client
+const kmsClient = new KMSClient({ 
+  region: process.env.AWS_REGION || 'us-east-1' 
+});
 
 /**
  * Generate encryption key from environment variable or create a new one
@@ -75,6 +81,83 @@ export function decryptSensitiveData(encryptedData: string): string {
   } catch (error) {
     console.error('Decryption error:', error);
     throw new Error('Failed to decrypt sensitive data');
+  }
+}
+
+/**
+ * Encrypt transcript data using AWS KMS
+ */
+export async function encryptTranscriptWithKMS(transcript: string): Promise<string> {
+  try {
+    const kmsKeyId = process.env.KMS_KEY_ID;
+    
+    if (!kmsKeyId) {
+      console.warn('KMS_KEY_ID not provided, falling back to local encryption');
+      return encryptSensitiveData(transcript);
+    }
+
+    const command = new EncryptCommand({
+      KeyId: kmsKeyId,
+      Plaintext: Buffer.from(transcript, 'utf8'),
+      EncryptionContext: {
+        purpose: 'therapeutic-transcript',
+        application: 'hope-ai-companion'
+      }
+    });
+
+    const response = await kmsClient.send(command);
+    
+    if (!response.CiphertextBlob) {
+      throw new Error('KMS encryption failed - no ciphertext returned');
+    }
+
+    // Convert to base64 for storage
+    return Buffer.from(response.CiphertextBlob).toString('base64');
+  } catch (error) {
+    console.error('KMS encryption error:', error);
+    // Fallback to local encryption if KMS fails
+    console.warn('Falling back to local encryption due to KMS error');
+    return encryptSensitiveData(transcript);
+  }
+}
+
+/**
+ * Decrypt transcript data using AWS KMS
+ */
+export async function decryptTranscriptWithKMS(encryptedTranscript: string): Promise<string> {
+  try {
+    const kmsKeyId = process.env.KMS_KEY_ID;
+    
+    // If no KMS key configured, try local decryption
+    if (!kmsKeyId) {
+      return decryptSensitiveData(encryptedTranscript);
+    }
+
+    // Try KMS decryption first
+    try {
+      const command = new DecryptCommand({
+        CiphertextBlob: Buffer.from(encryptedTranscript, 'base64'),
+        EncryptionContext: {
+          purpose: 'therapeutic-transcript',
+          application: 'hope-ai-companion'
+        }
+      });
+
+      const response = await kmsClient.send(command);
+      
+      if (!response.Plaintext) {
+        throw new Error('KMS decryption failed - no plaintext returned');
+      }
+
+      return Buffer.from(response.Plaintext).toString('utf8');
+    } catch (kmsError) {
+      console.warn('KMS decryption failed, trying local decryption:', kmsError);
+      // Fallback to local decryption (for backwards compatibility)
+      return decryptSensitiveData(encryptedTranscript);
+    }
+  } catch (error) {
+    console.error('Transcript decryption error:', error);
+    throw new Error('Failed to decrypt transcript data');
   }
 }
 

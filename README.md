@@ -102,9 +102,24 @@ export AWS_SECRET_ACCESS_KEY=""
 export AWS_SESSION_TOKEN=""
 ```
 
-**Note**: For demo purposes, no additional configuration is needed. The application uses default encryption keys and will work out of the box. For production use, set a custom `ENCRYPTION_KEY` environment variable.
+4. Create a KMS key for transcript encryption:
+```bash
+# Create a KMS key for encrypting therapeutic conversation transcripts
+aws kms create-key \
+    --description "Hope AI Therapeutic Transcript Encryption Key" \
+    --usage ENCRYPT_DECRYPT \
+    --key-spec SYMMETRIC_DEFAULT \
+    --region us-east-1
+```
 
-4. Create DynamoDB tables:
+Copy the `KeyId` from the response and add it to your `.env` file:
+```bash
+KMS_KEY_ID=your-kms-key-id-here
+```
+
+**Note**: KMS encryption provides enterprise-grade security for sensitive therapeutic conversations. If no KMS key is provided, the application will fall back to local encryption for demo purposes.
+
+5. Create DynamoDB tables:
 
 **Users Table:**
 ```bash
@@ -154,7 +169,7 @@ aws dynamodb create-table \
 
 ```
 
-5. Build the TypeScript code:
+6. Build the TypeScript code:
 ```bash
 npm run build
 ```
@@ -247,10 +262,30 @@ The application uses DynamoDB to store user data and session information:
 - **therapeutic-wave-sessions**: Stores individual therapy sessions with conversation data
 
 ### Key Features
-- Encrypted conversation transcripts for privacy
-- Session continuity and user recognition
-- Emotional state tracking and progress monitoring
-- Secure user identification with UUID-based system
+- **AWS KMS encrypted conversation transcripts** for maximum security
+- **Session continuity** and user recognition
+- **Emotional state tracking** and progress monitoring
+- **Secure user identification** with UUID-based system
+- **Enterprise-grade encryption** for therapeutic data
+
+## 🔐 Security & Privacy
+
+### **Enterprise-Grade Encryption**
+- **AWS KMS Integration** - Therapeutic conversation transcripts are encrypted using AWS Key Management Service
+- **Encryption Context** - Each transcript includes metadata for audit trails and access control
+- **Key Rotation** - Supports automatic key rotation for enhanced security
+- **Fallback Protection** - Graceful fallback to local encryption if KMS is unavailable
+
+### **Data Protection**
+- **PII Sanitization** - Automatically removes email addresses, phone numbers, and other sensitive data
+- **Secure Storage** - All user data encrypted at rest in DynamoDB
+- **Access Control** - KMS policies control who can decrypt therapeutic conversations
+- **Audit Trails** - Complete logging of encryption/decryption operations
+
+### **Compliance Ready**
+- **HIPAA Considerations** - KMS encryption supports healthcare compliance requirements
+- **Data Residency** - Control data location through AWS region selection
+- **Retention Policies** - Configurable data retention for regulatory compliance
 
 ## Infrastructure
 The application runs on a Node.js server with the following key components:
@@ -259,3 +294,4 @@ The application runs on a Node.js server with the following key components:
 - Socket.IO for real-time communication
 - Nova Sonic client for speech to speech model processing
 - DynamoDB for persistent data storage
+- AWS KMS for transcript encryption
