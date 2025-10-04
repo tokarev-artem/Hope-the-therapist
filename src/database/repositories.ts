@@ -284,6 +284,8 @@ export class SessionsRepository extends BaseRepository {
       emotionalState: JSON.stringify(session.emotionalState),
       wavePatterns: JSON.stringify(session.wavePatterns),
       therapeuticMetrics: JSON.stringify(session.therapeuticMetrics),
+      keyTopics: session.keyTopics ? JSON.stringify(session.keyTopics) : undefined,
+      therapeuticProgress: session.therapeuticProgress ? JSON.stringify(session.therapeuticProgress) : undefined,
       // Write legacy GSI attributes for compatibility with existing deployments
       GSI1PK: session.userId,
       GSI1SK: session.startTime
@@ -487,7 +489,9 @@ export class SessionsRepository extends BaseRepository {
       ...dynamoSession,
       emotionalState: JSON.parse(dynamoSession.emotionalState),
       wavePatterns: JSON.parse(dynamoSession.wavePatterns),
-      therapeuticMetrics: JSON.parse(dynamoSession.therapeuticMetrics)
+      therapeuticMetrics: JSON.parse(dynamoSession.therapeuticMetrics),
+      keyTopics: dynamoSession.keyTopics ? JSON.parse(dynamoSession.keyTopics) : undefined,
+      therapeuticProgress: dynamoSession.therapeuticProgress ? JSON.parse(dynamoSession.therapeuticProgress) : undefined
     };
 
     // Decrypt transcript if present using KMS

@@ -94,7 +94,7 @@ function extractEmotionsFromTranscript(transcript: string): string[] {
 }
 
 /**
- * Extract key topics and issues from conversation transcript
+ * Extract key topics and issues from conversation transcript using actual content
  */
 function extractConversationTopics(transcript: string): {
   issues: string[];
@@ -106,32 +106,28 @@ function extractConversationTopics(transcript: string): {
   }
 
   const lowerTranscript = transcript.toLowerCase();
-
-  // More specific issue patterns with context awareness
-  const issuePatterns = {
-    'work stress': ['boss', 'workplace', 'manager', 'office', 'colleague', 'job stress', 'work pressure'],
-    'hobby/craft issues': ['woodworking', 'crafting', 'hobby', 'creative', 'making', 'building', 'tools', 'hammer', 'saw'],
-    'sleep problems': ['sleep', 'insomnia', 'tired', 'exhausted', 'rest', 'bed', 'wake up'],
-    'relationship issues': ['partner', 'spouse', 'relationship', 'marriage', 'boyfriend', 'girlfriend'],
-    'anxiety': ['anxious', 'anxiety', 'worried', 'panic', 'nervous'],
-    'depression': ['sad', 'depressed', 'down', 'hopeless', 'empty', 'worthless'],
-    'family problems': ['family', 'parents', 'children', 'kids', 'mother', 'father', 'sibling'],
-    'financial stress': ['money', 'financial', 'debt', 'bills', 'budget', 'income', 'expenses'],
-    'health concerns': ['health', 'sick', 'illness', 'doctor', 'medical', 'pain', 'symptoms'],
-    'eating/food issues': ['eat', 'eating', 'food', 'appetite', 'hungry', 'comfort eating']
-  };
-
-  const detectedIssues: string[] = [];
   const topics: string[] = [];
   const keyPhrases: string[] = [];
 
-  // Extract issues with better context awareness
-  for (const [issue, keywords] of Object.entries(issuePatterns)) {
-    const matchCount = keywords.filter(keyword => lowerTranscript.includes(keyword)).length;
-    if (matchCount >= 1) { // Lower threshold but be more specific
-      detectedIssues.push(issue);
+  // Extract topics from all meaningful words - completely dynamic
+  const words = lowerTranscript.split(/\s+/);
+  const meaningfulWords = words.filter(word =>
+    word.length > 3 &&
+    !['the', 'and', 'but', 'for', 'you', 'are', 'was', 'not', 'can', 'had', 'her', 'his', 'she', 'him'].includes(word)
+  );
+
+  // Count word frequency
+  const wordCounts = meaningfulWords.reduce((acc, word) => {
+    acc[word] = (acc[word] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Extract topics from words that appear multiple times or are substantial
+  Object.entries(wordCounts).forEach(([word, count]) => {
+    if (count > 1 || word.length > 5) {
+      topics.push(word);
     }
-  }
+  });
 
   // Extract key phrases - focus on meaningful user content
   const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 15);
@@ -153,14 +149,8 @@ function extractConversationTopics(transcript: string): {
     const isUserContent = trimmed.startsWith('User:');
     const isAssistantContent = trimmed.startsWith('Assistant:');
 
-    // Look for sentences that contain important context or problems
-    if (lower.includes('used to') || lower.includes('can\'t') || lower.includes('broken') ||
-      lower.includes('enjoy') || lower.includes('love') || lower.includes('problem') ||
-      lower.includes('difficult') || lower.includes('struggle') || lower.includes('help') ||
-      lower.includes('feel') || lower.includes('want') || lower.includes('need') ||
-      lower.includes('boss') || lower.includes('respect') || lower.includes('upset') ||
-      lower.includes('makes me') || lower.includes('because')) {
-
+    // Include all meaningful sentences - let length and content determine importance
+    if (trimmed.length > 20) { // Only sentences with substantial content
       if (isUserContent) {
         userPhrases.push(trimmed.replace('User: ', ''));
       } else if (isAssistantContent && !lower.includes('i\'m') && !lower.includes('you\'re')) {
@@ -185,32 +175,15 @@ function extractConversationTopics(transcript: string): {
   console.log('🤖 Assistant phrases found:', assistantPhrases);
   console.log('✅ Final key phrases:', keyPhrases);
 
-  // Extract topics with better context awareness
-  const topicPatterns = {
-    'hobbies/crafts': ['woodworking', 'crafting', 'hobby', 'creative', 'making', 'building'],
-    'work': ['job', 'boss', 'workplace', 'manager', 'office', 'colleague'],
-    'family': ['family', 'parents', 'children', 'kids', 'mother', 'father'],
-    'health': ['health', 'sick', 'illness', 'doctor', 'medical'],
-    'relationships': ['partner', 'spouse', 'relationship', 'marriage'],
-    'emotions': ['feel', 'feeling', 'mood', 'emotional', 'sad', 'happy', 'anxious'],
-    'food/eating': ['eat', 'eating', 'food', 'appetite', 'hungry']
-  };
-
-  for (const [topic, keywords] of Object.entries(topicPatterns)) {
-    if (keywords.some(keyword => lowerTranscript.includes(keyword))) {
-      topics.push(topic);
-    }
-  }
-
   return {
-    issues: detectedIssues,
-    topics: [...new Set(topics)], // Remove duplicates
-    keyPhrases: keyPhrases.slice(0, 5) // Increase to top 5 key phrases for better context
+    issues: [], // Remove hardcoded issue detection - let AI interpret from key phrases
+    topics: [...new Set(topics)].slice(0, 10), // Remove duplicates, limit to top 10
+    keyPhrases: keyPhrases.slice(0, 5) // Top 5 key phrases for context
   };
 }
 
 /**
- * Generate personalized follow-up questions based on previous session content
+ * Generate personalized follow-up questions based on actual session data
  */
 function generateFollowUpQuestions(
   lastSessionSummary: string,
@@ -221,91 +194,36 @@ function generateFollowUpQuestions(
 ): string[] {
   const questions: string[] = [];
   const name = userName ? userName : 'you';
-  const lowerSummary = lastSessionSummary.toLowerCase();
 
-  // Generate specific questions based on key phrases and content
-  if (lowerSummary.includes('boss') && (lowerSummary.includes('annoying') || lowerSummary.includes('useless'))) {
-    questions.push(`How have things been with your boss since our last session, ${name}? Has the situation improved at all?`);
-    questions.push(`You mentioned your boss thinks you're useless, but you know you've helped the company grow. How are you feeling about that situation now?`);
-  }
-
-  // Generate questions based on identified issues
-  if (issues.includes('work stress')) {
-    if (!questions.some(q => q.includes('boss'))) { // Avoid duplicates
-      questions.push(`How have things been with your work situation, ${name}? Did you manage to address the stress issues?`);
+  // Generate questions directly from key phrases - completely dynamic
+  keyPhrases.forEach((phrase, index) => {
+    if (phrase && phrase.length > 10) {
+      // Create generic follow-up questions that reference the actual content
+      if (index === 0) {
+        // First key phrase gets a direct reference
+        questions.push(`How has that situation been since our last session, ${name}?`);
+      } else if (index === 1) {
+        // Second key phrase gets a feeling-based follow-up
+        questions.push(`Have you been able to work through what we discussed about that last time?`);
+      }
     }
-    questions.push(`Have you been able to implement any stress management techniques at work?`);
-  }
+  });
 
-  if (issues.includes('hobby/craft issues')) {
-    questions.push(`How are things going with your woodworking, ${name}? Were you able to get your tools sorted out?`);
-    questions.push(`Have you been able to get back to your creative projects since we last talked?`);
-  }
-
-  if (issues.includes('eating/food issues')) {
-    questions.push(`How has your relationship with food been since our last session, ${name}?`);
-    questions.push(`Have you been able to find some balance with your eating habits?`);
-  }
-
-  if (issues.includes('sleep problems')) {
-    questions.push(`How has your sleep been since our last session, ${name}?`);
-  }
-
-  if (issues.includes('anxiety')) {
-    questions.push(`How have you been managing your anxiety since we last spoke?`);
-  }
-
-  // Generate questions based on specific topics
-  if (topics.includes('hobbies/crafts')) {
-    questions.push(`How are your creative projects going, ${name}?`);
-  }
-
-  if (topics.includes('work') && !questions.some(q => q.includes('work'))) {
-    questions.push(`How are things going at work, ${name}?`);
-  }
-
-  // Generate questions based on session summary content
+  // Generate questions based on session summary patterns
+  const lowerSummary = lastSessionSummary.toLowerCase();
   if (lowerSummary.includes('mood improved')) {
     questions.push(`I'm glad to see your mood improved in our last session. How have you been feeling since then?`);
   }
 
-  if (lowerSummary.includes('effectiveness')) {
-    questions.push(`Last time we found some helpful strategies. Have you been able to use any of them?`);
-  }
-
-  // Use key phrases to create more specific questions
-  keyPhrases.forEach(phrase => {
-    const lowerPhrase = phrase.toLowerCase();
-    if (lowerPhrase.includes('boss') && lowerPhrase.includes('annoying') && !questions.some(q => q.includes('boss'))) {
-      questions.push(`You mentioned your boss was being annoying. How has that been going, ${name}?`);
-    }
-    if (lowerPhrase.includes('useless') && !questions.some(q => q.includes('useless'))) {
-      questions.push(`Last time you felt your boss thought you were useless. How are you processing those feelings now?`);
-    }
-    if (lowerPhrase.includes('woodworking') && lowerPhrase.includes('enjoy') && !questions.some(q => q.includes('woodworking'))) {
-      questions.push(`You mentioned you used to enjoy woodworking. How are you feeling about that hobby now, ${name}?`);
-    }
-    if (lowerPhrase.includes('broken') && lowerPhrase.includes('hammer') && !questions.some(q => q.includes('tools'))) {
-      questions.push(`Last time your hammer was broken and affecting your woodworking. Have you been able to get that sorted out?`);
-    }
-    if (lowerPhrase.includes('eat') && lowerPhrase.includes('lot') && !questions.some(q => q.includes('eating'))) {
-      questions.push(`You mentioned wanting to eat a lot. How has your relationship with food been since then?`);
-    }
-    if (lowerPhrase.includes('boss') && lowerPhrase.includes('respect') && !questions.some(q => q.includes('respect'))) {
-      questions.push(`You mentioned your boss doesn't respect you and it makes you feel upset. How has that situation been since our last session?`);
-    }
-    if (lowerPhrase.includes('makes me feel') && lowerPhrase.includes('upset') && !questions.some(q => q.includes('upset'))) {
-      questions.push(`Last time you were feeling upset about your work situation. How are you processing those feelings now?`);
-    }
-  });
-
-  // Generic follow-up if no specific issues identified
+  // Fallback to generic but personalized questions
   if (questions.length === 0) {
     questions.push(`How have you been since our last session, ${name}?`);
     questions.push(`Have you had a chance to think about what we discussed last time?`);
   }
 
-  return questions.slice(0, 2); // Return top 2 most relevant questions
+  // Remove duplicates and return top 2
+  const uniqueQuestions = [...new Set(questions)];
+  return uniqueQuestions.slice(0, 2);
 }
 
 /**
@@ -418,27 +336,41 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
     .slice(0, 3)
     .map(([emotion]) => emotion);
 
-  // Get last session summary and analyze conversation content
+  // Get last session data and analyze conversation content
   if (sessions.length > 0) {
     const lastSession = sessions[0];
     analysis.lastSessionSummary = lastSession.conversationSummary || 'Previous session completed';
 
-    // Debug: Log the full session object to understand what data we have
-    console.log('🔍 Full last session object:', JSON.stringify(lastSession, null, 2));
-    console.log('🔍 Analyzing last session summary:', analysis.lastSessionSummary);
-
-    const conversationAnalysis = extractConversationTopics(analysis.lastSessionSummary);
-    analysis.lastSessionIssues = conversationAnalysis.issues;
-    analysis.lastSessionTopics = conversationAnalysis.topics;
-    analysis.lastSessionKeyPhrases = conversationAnalysis.keyPhrases;
-
-    console.log('📊 Extracted conversation analysis:', {
-      issues: analysis.lastSessionIssues,
-      topics: analysis.lastSessionTopics,
-      keyPhrases: analysis.lastSessionKeyPhrases
+    // Debug: Log the session data we have
+    console.log('🔍 Last session data available:', {
+      hasConversationSummary: !!lastSession.conversationSummary,
+      hasKeyTopics: !!lastSession.keyTopics,
+      hasContinuityNotes: !!lastSession.continuityNotes,
+      hasEncryptedTranscript: !!lastSession.encryptedTranscript
     });
 
-    // Generate personalized follow-up questions based on last session
+    // Use AI-generated insights if available, otherwise analyze the summary
+    if (lastSession.keyTopics && Array.isArray(lastSession.keyTopics)) {
+      analysis.lastSessionTopics = lastSession.keyTopics;
+      console.log('✅ Using AI-generated key topics:', analysis.lastSessionTopics);
+    }
+
+    if (lastSession.continuityNotes) {
+      // Use AI-generated continuity notes for better context
+      analysis.lastSessionKeyPhrases = [lastSession.continuityNotes];
+      console.log('✅ Using AI-generated continuity notes:', lastSession.continuityNotes);
+    }
+
+    // If we don't have AI insights, fall back to analyzing the summary
+    if (!lastSession.keyTopics && !lastSession.continuityNotes) {
+      console.log('⚠️ No AI insights available, analyzing summary text...');
+      const conversationAnalysis = extractConversationTopics(analysis.lastSessionSummary);
+      analysis.lastSessionIssues = conversationAnalysis.issues;
+      analysis.lastSessionTopics = conversationAnalysis.topics;
+      analysis.lastSessionKeyPhrases = conversationAnalysis.keyPhrases;
+    }
+
+    // Generate personalized follow-up questions based on available data
     analysis.followUpQuestions = generateFollowUpQuestions(
       analysis.lastSessionSummary,
       analysis.lastSessionIssues,
@@ -482,8 +414,10 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
     contextMessage += `Previous issues discussed: ${analysis.lastSessionIssues.join(', ')}. `;
   }
 
-  // Add key conversation details for AI context
-  if (analysis.lastSessionKeyPhrases.length > 0) {
+  // Add key conversation details for AI context (prioritize AI-generated continuity notes)
+  if (sessions.length > 0 && sessions[0].continuityNotes) {
+    contextMessage += `AI Continuity Notes: ${sessions[0].continuityNotes} `;
+  } else if (analysis.lastSessionKeyPhrases.length > 0) {
     contextMessage += `Key details from last session: ${analysis.lastSessionKeyPhrases.join('; ')}. `;
   }
 
@@ -727,29 +661,46 @@ export function addUserManagement(socket: any) {
     userConsent: boolean;
   }) => {
     try {
-      console.log('Completing therapy session:', data.sessionId);
+      console.log('🔄 Completing therapy session:', data.sessionId);
+      console.log('📝 Processing transcript with AI summarization...');
 
-      // Generate a summary from the transcript
-      const summary = generateSessionSummary(data.transcript, data.finalEmotionalState);
-      console.log('Generated session summary:', summary);
+      // Import the transcript processor
+      const { transcriptProcessor } = await import('./services/transcript-processor');
 
-      // Update session in database
-      console.log('Updating session in database:', data.sessionId);
+      // Process transcript with AI-powered summarization using Amazon Nova Micro
+      const aiSummary = await transcriptProcessor.processSessionTranscript(
+        data.sessionId,
+        data.transcript,
+        data.userConsent
+      );
+
+      // Use AI summary if available, fallback to basic summary
+      const summary = aiSummary ? aiSummary.sessionSummary : generateSessionSummary(data.transcript, data.finalEmotionalState);
+      console.log('✅ Generated AI-powered session summary:', summary);
+
+      // Update session in database with comprehensive data
+      console.log('💾 Updating session in database:', data.sessionId);
       const updatedSession = await sessionsRepository.updateSession(data.sessionId, {
         endTime: new Date().toISOString(),
         duration: data.sessionMetrics.duration,
         emotionalState: {
           ...data.finalEmotionalState,
-          dominantEmotions: extractEmotionsFromTranscript(data.transcript)
+          dominantEmotions: aiSummary ? aiSummary.emotionalInsights.dominantEmotions : extractEmotionsFromTranscript(data.transcript)
         },
         therapeuticMetrics: data.sessionMetrics,
         conversationSummary: summary,
-        // Only store transcript if user consents
+        // Store additional AI insights if available
+        ...(aiSummary && {
+          keyTopics: aiSummary.keyTopics,
+          therapeuticProgress: aiSummary.therapeuticProgress,
+          continuityNotes: aiSummary.continuityNotes
+        }),
+        // Only store transcript if user consents (will be encrypted by repository)
         ...(data.userConsent && data.transcript ? {
-          encryptedTranscript: data.transcript // Will be encrypted by repository
+          encryptedTranscript: data.transcript
         } : {})
       });
-      console.log('✅ Session updated in database:', data.sessionId);
+      console.log('✅ Session updated in database with AI insights:', data.sessionId);
 
       // Clear active session
       const completedSession = activeUserSessions.get(socket.id);
@@ -758,19 +709,47 @@ export function addUserManagement(socket: any) {
         completedSession.startTime = undefined;
       }
 
-      console.log('Therapy session completed:', data.sessionId);
+      console.log('🎉 Therapy session completed successfully:', data.sessionId);
       socket.emit('sessionCompleted', {
         sessionId: data.sessionId,
         summary: summary,
+        aiInsights: aiSummary,
         success: true
       });
 
     } catch (error) {
-      console.error('Error completing therapy session:', error);
-      socket.emit('sessionCompleted', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('❌ Error completing therapy session:', error);
+      
+      // Fallback to basic summary if AI processing fails
+      try {
+        const basicSummary = generateSessionSummary(data.transcript, data.finalEmotionalState);
+        await sessionsRepository.updateSession(data.sessionId, {
+          endTime: new Date().toISOString(),
+          duration: data.sessionMetrics.duration,
+          emotionalState: {
+            ...data.finalEmotionalState,
+            dominantEmotions: extractEmotionsFromTranscript(data.transcript)
+          },
+          therapeuticMetrics: data.sessionMetrics,
+          conversationSummary: basicSummary,
+          ...(data.userConsent && data.transcript ? {
+            encryptedTranscript: data.transcript
+          } : {})
+        });
+        
+        socket.emit('sessionCompleted', {
+          sessionId: data.sessionId,
+          summary: basicSummary,
+          success: true,
+          fallback: true
+        });
+      } catch (fallbackError) {
+        console.error('❌ Fallback session completion also failed:', fallbackError);
+        socket.emit('sessionCompleted', {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }
   });
 

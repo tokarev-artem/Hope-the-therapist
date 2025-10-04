@@ -2,12 +2,9 @@ import express from 'express';
 import http from 'http';
 import path from 'path';
 import { Server } from 'socket.io';
-import { fromIni } from "@aws-sdk/credential-providers";
 import { NovaSonicBidirectionalStreamClient } from './client';
 import { Buffer } from 'node:buffer';
 import { addUserManagement } from './user-server-integration';
-
-// Configure AWS credentials
 
 // Create Express app and HTTP server
 const app = express();

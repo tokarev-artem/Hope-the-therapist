@@ -4,7 +4,7 @@
  */
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
-import { fromIni } from '@aws-sdk/credential-providers';
+import { fromEnv } from '@aws-sdk/credential-providers';
 import {
   sessionsRepository,
   encryptSensitiveData,
@@ -49,9 +49,25 @@ export class TranscriptProcessor {
   private bedrockClient: BedrockRuntimeClient;
 
   constructor() {
+    // Log AWS configuration for debugging
+    console.log('🔧 Initializing TranscriptProcessor with AWS configuration:');
+    console.log('   Region:', process.env.AWS_REGION || 'us-east-1');
+    console.log('   AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? '✅ Set' : '❌ Not set');
+    console.log('   AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? '✅ Set' : '❌ Not set');
+
+    // Try to use environment variables first, then fall back to default chain
+    let credentials;
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      console.log('🔑 Using environment variable credentials');
+      credentials = fromEnv();
+    } else {
+      console.log('🔑 Using default AWS credential chain (may include EC2 instance role)');
+      // Don't specify credentials to use default chain
+    }
+
     this.bedrockClient = new BedrockRuntimeClient({
       region: process.env.AWS_REGION || 'us-east-1',
-      credentials: fromIni()
+      ...(credentials && { credentials })
     });
   }
 
@@ -102,32 +118,54 @@ export class TranscriptProcessor {
     const prompt = this.buildSummarizationPrompt(transcript);
 
     try {
+      console.log('🤖 Calling Amazon Nova Micro for transcript summarization...');
+
       const command = new InvokeModelCommand({
         modelId: 'amazon.nova-micro-v1:0',
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
-          inputText: prompt,
-          textGenerationConfig: {
-            maxTokenCount: 1000,
-            temperature: 0.5,
-            topP: 0.9,
-            stopSequences: []
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          inferenceConfig: {
+            maxTokens: 1000,
+            temperature: 0.5
+            // Note: Using temperature, not topP (use one or the other)
           }
         })
       });
 
       const response = await this.bedrockClient.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-      const outputText = responseBody?.results?.[0]?.outputText || '';
+      const outputText = responseBody?.output?.message?.content?.[0]?.text || '';
+
       if (!outputText) {
         throw new Error('Empty response from Nova Micro');
       }
+
+      console.log('✅ Successfully received AI summary from Nova Micro');
       return this.parseAISummary(outputText);
 
-    } catch (error) {
-      console.error('Error generating AI summary:', error);
-      // Fallback to basic summary if AI fails
+    } catch (error: any) {
+      console.error('❌ Error generating AI summary:', error);
+
+      if (error?.name === 'CredentialsProviderError') {
+        console.error('🔑 AWS Credentials not found. Please ensure one of the following:');
+        console.error('   1. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables');
+        console.error('   2. Configure AWS CLI with "aws configure"');
+        console.error('   3. Use EC2 instance role if running on AWS');
+        console.error('   4. Set up AWS credentials file at ~/.aws/credentials');
+      }
+
+      console.log('⚠️ Falling back to basic summary generation...');
       return this.generateFallbackSummary(transcript);
     }
   }
@@ -232,19 +270,27 @@ Focus on:
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
-          inputText: progressPrompt,
-          textGenerationConfig: {
-            maxTokenCount: 800,
-            temperature: 0.5,
-            topP: 0.9,
-            stopSequences: []
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  text: progressPrompt
+                }
+              ]
+            }
+          ],
+          inferenceConfig: {
+            maxTokens: 800,
+            temperature: 0.5
+            // Note: Using temperature, not topP (use one or the other)
           }
         })
       });
 
       const response = await this.bedrockClient.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-      const outputText = responseBody?.results?.[0]?.outputText || '';
+      const outputText = responseBody?.output?.message?.content?.[0]?.text || '';
       if (!outputText) {
         throw new Error('Empty response from Nova Micro');
       }

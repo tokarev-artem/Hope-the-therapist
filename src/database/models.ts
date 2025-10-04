@@ -35,6 +35,15 @@ export interface Session {
   wavePatterns: WavePatternData[];
   encryptedTranscript?: string; // Encrypted conversation transcript
   therapeuticMetrics: TherapeuticMetrics;
+  // AI-generated insights from transcript processing
+  keyTopics?: string[]; // Topics identified by AI
+  continuityNotes?: string; // AI-generated notes for next session
+  therapeuticProgress?: {
+    breakthroughs: string[];
+    challenges: string[];
+    copingStrategies: string[];
+    recommendedFocus: string[];
+  };
 }
 
 export interface EmotionalState {
@@ -81,8 +90,10 @@ export interface DynamoDBUser extends Omit<User, 'preferences' | 'isAnonymous'> 
   GSI1SK?: string; // Global Secondary Index sort key
 }
 
-export interface DynamoDBSession extends Omit<Session, 'emotionalState' | 'wavePatterns' | 'therapeuticMetrics'> {
+export interface DynamoDBSession extends Omit<Session, 'emotionalState' | 'wavePatterns' | 'therapeuticMetrics' | 'keyTopics' | 'therapeuticProgress'> {
   emotionalState: string; // JSON stringified EmotionalState
+  keyTopics?: string; // JSON stringified string[]
+  therapeuticProgress?: string; // JSON stringified therapeutic progress object
   wavePatterns: string; // JSON stringified WavePatternData[]
   therapeuticMetrics: string; // JSON stringified TherapeuticMetrics
   // Optional legacy/index support keys (present in existing deployments)
