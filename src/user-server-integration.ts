@@ -45,8 +45,20 @@ function generateSessionSummary(transcript: string, finalEmotionalState: any): s
 
   // Add key insights from the most relevant phrases
   if (conversationAnalysis.keyPhrases.length > 0) {
-    const relevantPhrases = conversationAnalysis.keyPhrases.slice(0, 2);
-    summary += `Key details from session: ${relevantPhrases.join('. ')}. `;
+    // Filter out any remaining generic phrases and prioritize user content
+    const relevantPhrases = conversationAnalysis.keyPhrases
+      .filter(phrase => {
+        const lower = phrase.toLowerCase();
+        return !lower.includes('first session') &&
+          !lower.includes('safe space') &&
+          !lower.includes('here to listen') &&
+          phrase.length > 10; // Ensure meaningful content
+      })
+      .slice(0, 2);
+
+    if (relevantPhrases.length > 0) {
+      summary += `Key details from session: ${relevantPhrases.join('. ')}. `;
+    }
   }
 
   if (finalEmotionalState.calmingEffectiveness) {
@@ -121,18 +133,57 @@ function extractConversationTopics(transcript: string): {
     }
   }
 
-  // Extract key phrases - focus on meaningful sentences
+  // Extract key phrases - focus on meaningful user content
   const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 15);
+  const userPhrases: string[] = [];
+  const assistantPhrases: string[] = [];
+
   sentences.forEach(sentence => {
-    const lower = sentence.toLowerCase().trim();
+    const trimmed = sentence.trim();
+    const lower = trimmed.toLowerCase();
+
+    // Skip generic assistant responses and boilerplate
+    if (lower.includes('first session') || lower.includes('safe space') ||
+      lower.includes('non-judgmental') || lower.includes('here to listen') ||
+      lower.includes('here to help') || lower.includes('want you to know')) {
+      return; // Skip generic assistant responses
+    }
+
+    // Separate user and assistant content
+    const isUserContent = trimmed.startsWith('User:');
+    const isAssistantContent = trimmed.startsWith('Assistant:');
+
     // Look for sentences that contain important context or problems
     if (lower.includes('used to') || lower.includes('can\'t') || lower.includes('broken') ||
-        lower.includes('enjoy') || lower.includes('love') || lower.includes('problem') || 
-        lower.includes('difficult') || lower.includes('struggle') || lower.includes('help') || 
-        lower.includes('feel') || lower.includes('want') || lower.includes('need')) {
-      keyPhrases.push(sentence.trim());
+      lower.includes('enjoy') || lower.includes('love') || lower.includes('problem') ||
+      lower.includes('difficult') || lower.includes('struggle') || lower.includes('help') ||
+      lower.includes('feel') || lower.includes('want') || lower.includes('need') ||
+      lower.includes('boss') || lower.includes('respect') || lower.includes('upset') ||
+      lower.includes('makes me') || lower.includes('because')) {
+
+      if (isUserContent) {
+        userPhrases.push(trimmed.replace('User: ', ''));
+      } else if (isAssistantContent && !lower.includes('i\'m') && !lower.includes('you\'re')) {
+        // Only include assistant content that's not generic supportive statements
+        assistantPhrases.push(trimmed.replace('Assistant: ', ''));
+      } else if (!isUserContent && !isAssistantContent) {
+        // Content without speaker prefix - treat as important
+        userPhrases.push(trimmed);
+      }
     }
   });
+
+  // Prioritize user content, then meaningful assistant content
+  keyPhrases.push(...userPhrases.slice(0, 4)); // Up to 4 user phrases
+  if (keyPhrases.length < 3) {
+    keyPhrases.push(...assistantPhrases.slice(0, 2)); // Add up to 2 assistant phrases if needed
+  }
+
+  // Debug logging
+  console.log('🔍 Conversation analysis debug:');
+  console.log('📝 User phrases found:', userPhrases);
+  console.log('🤖 Assistant phrases found:', assistantPhrases);
+  console.log('✅ Final key phrases:', keyPhrases);
 
   // Extract topics with better context awareness
   const topicPatterns = {
@@ -239,6 +290,12 @@ function generateFollowUpQuestions(
     }
     if (lowerPhrase.includes('eat') && lowerPhrase.includes('lot') && !questions.some(q => q.includes('eating'))) {
       questions.push(`You mentioned wanting to eat a lot. How has your relationship with food been since then?`);
+    }
+    if (lowerPhrase.includes('boss') && lowerPhrase.includes('respect') && !questions.some(q => q.includes('respect'))) {
+      questions.push(`You mentioned your boss doesn't respect you and it makes you feel upset. How has that situation been since our last session?`);
+    }
+    if (lowerPhrase.includes('makes me feel') && lowerPhrase.includes('upset') && !questions.some(q => q.includes('upset'))) {
+      questions.push(`Last time you were feeling upset about your work situation. How are you processing those feelings now?`);
     }
   });
 
