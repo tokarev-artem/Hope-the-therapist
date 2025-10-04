@@ -43,9 +43,10 @@ function generateSessionSummary(transcript: string, finalEmotionalState: any): s
     summary += `Topics covered: ${conversationAnalysis.topics.join(', ')}. `;
   }
 
-  // Add key insights
+  // Add key insights from the most relevant phrases
   if (conversationAnalysis.keyPhrases.length > 0) {
-    summary += `Key points: ${conversationAnalysis.keyPhrases[0]}. `;
+    const relevantPhrases = conversationAnalysis.keyPhrases.slice(0, 2);
+    summary += `Key details from session: ${relevantPhrases.join('. ')}. `;
   }
 
   if (finalEmotionalState.calmingEffectiveness) {
@@ -94,54 +95,66 @@ function extractConversationTopics(transcript: string): {
 
   const lowerTranscript = transcript.toLowerCase();
 
-  // Common issue patterns
+  // More specific issue patterns with context awareness
   const issuePatterns = {
-    'work stress': ['boss', 'work', 'job', 'colleague', 'workplace', 'manager', 'office'],
+    'work stress': ['boss', 'workplace', 'manager', 'office', 'colleague', 'job stress', 'work pressure'],
+    'hobby/craft issues': ['woodworking', 'crafting', 'hobby', 'creative', 'making', 'building', 'tools', 'hammer', 'saw'],
     'sleep problems': ['sleep', 'insomnia', 'tired', 'exhausted', 'rest', 'bed', 'wake up'],
     'relationship issues': ['partner', 'spouse', 'relationship', 'marriage', 'boyfriend', 'girlfriend'],
-    'anxiety': ['anxious', 'anxiety', 'worried', 'panic', 'nervous', 'stress'],
+    'anxiety': ['anxious', 'anxiety', 'worried', 'panic', 'nervous'],
     'depression': ['sad', 'depressed', 'down', 'hopeless', 'empty', 'worthless'],
     'family problems': ['family', 'parents', 'children', 'kids', 'mother', 'father', 'sibling'],
     'financial stress': ['money', 'financial', 'debt', 'bills', 'budget', 'income', 'expenses'],
-    'health concerns': ['health', 'sick', 'illness', 'doctor', 'medical', 'pain', 'symptoms']
+    'health concerns': ['health', 'sick', 'illness', 'doctor', 'medical', 'pain', 'symptoms'],
+    'eating/food issues': ['eat', 'eating', 'food', 'appetite', 'hungry', 'comfort eating']
   };
 
   const detectedIssues: string[] = [];
   const topics: string[] = [];
   const keyPhrases: string[] = [];
 
-  // Extract issues
+  // Extract issues with better context awareness
   for (const [issue, keywords] of Object.entries(issuePatterns)) {
     const matchCount = keywords.filter(keyword => lowerTranscript.includes(keyword)).length;
-    if (matchCount >= 2) { // Require at least 2 related keywords
+    if (matchCount >= 1) { // Lower threshold but be more specific
       detectedIssues.push(issue);
     }
   }
 
-  // Extract key phrases (sentences that might contain important context)
-  const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  // Extract key phrases - focus on meaningful sentences
+  const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 15);
   sentences.forEach(sentence => {
     const lower = sentence.toLowerCase().trim();
-    // Look for sentences that contain problem indicators
-    if (lower.includes('problem') || lower.includes('issue') || lower.includes('difficult') ||
-      lower.includes('struggle') || lower.includes('help') || lower.includes('fix') ||
-      lower.includes('better') || lower.includes('improve')) {
+    // Look for sentences that contain important context or problems
+    if (lower.includes('used to') || lower.includes('can\'t') || lower.includes('broken') ||
+        lower.includes('enjoy') || lower.includes('love') || lower.includes('problem') || 
+        lower.includes('difficult') || lower.includes('struggle') || lower.includes('help') || 
+        lower.includes('feel') || lower.includes('want') || lower.includes('need')) {
       keyPhrases.push(sentence.trim());
     }
   });
 
-  // Extract general topics
-  const topicKeywords = ['work', 'family', 'health', 'relationship', 'sleep', 'stress', 'anxiety'];
-  topicKeywords.forEach(topic => {
-    if (lowerTranscript.includes(topic)) {
+  // Extract topics with better context awareness
+  const topicPatterns = {
+    'hobbies/crafts': ['woodworking', 'crafting', 'hobby', 'creative', 'making', 'building'],
+    'work': ['job', 'boss', 'workplace', 'manager', 'office', 'colleague'],
+    'family': ['family', 'parents', 'children', 'kids', 'mother', 'father'],
+    'health': ['health', 'sick', 'illness', 'doctor', 'medical'],
+    'relationships': ['partner', 'spouse', 'relationship', 'marriage'],
+    'emotions': ['feel', 'feeling', 'mood', 'emotional', 'sad', 'happy', 'anxious'],
+    'food/eating': ['eat', 'eating', 'food', 'appetite', 'hungry']
+  };
+
+  for (const [topic, keywords] of Object.entries(topicPatterns)) {
+    if (keywords.some(keyword => lowerTranscript.includes(keyword))) {
       topics.push(topic);
     }
-  });
+  }
 
   return {
     issues: detectedIssues,
     topics: [...new Set(topics)], // Remove duplicates
-    keyPhrases: keyPhrases.slice(0, 3) // Limit to top 3 key phrases
+    keyPhrases: keyPhrases.slice(0, 5) // Increase to top 5 key phrases for better context
   };
 }
 
@@ -173,8 +186,14 @@ function generateFollowUpQuestions(
     questions.push(`Have you been able to implement any stress management techniques at work?`);
   }
 
-  if (issues.includes('self-worth issues')) {
-    questions.push(`How are you feeling about your self-worth since we last talked, ${name}? Have you been able to recognize your value?`);
+  if (issues.includes('hobby/craft issues')) {
+    questions.push(`How are things going with your woodworking, ${name}? Were you able to get your tools sorted out?`);
+    questions.push(`Have you been able to get back to your creative projects since we last talked?`);
+  }
+
+  if (issues.includes('eating/food issues')) {
+    questions.push(`How has your relationship with food been since our last session, ${name}?`);
+    questions.push(`Have you been able to find some balance with your eating habits?`);
   }
 
   if (issues.includes('sleep problems')) {
@@ -186,6 +205,10 @@ function generateFollowUpQuestions(
   }
 
   // Generate questions based on specific topics
+  if (topics.includes('hobbies/crafts')) {
+    questions.push(`How are your creative projects going, ${name}?`);
+  }
+
   if (topics.includes('work') && !questions.some(q => q.includes('work'))) {
     questions.push(`How are things going at work, ${name}?`);
   }
@@ -207,6 +230,15 @@ function generateFollowUpQuestions(
     }
     if (lowerPhrase.includes('useless') && !questions.some(q => q.includes('useless'))) {
       questions.push(`Last time you felt your boss thought you were useless. How are you processing those feelings now?`);
+    }
+    if (lowerPhrase.includes('woodworking') && lowerPhrase.includes('enjoy') && !questions.some(q => q.includes('woodworking'))) {
+      questions.push(`You mentioned you used to enjoy woodworking. How are you feeling about that hobby now, ${name}?`);
+    }
+    if (lowerPhrase.includes('broken') && lowerPhrase.includes('hammer') && !questions.some(q => q.includes('tools'))) {
+      questions.push(`Last time your hammer was broken and affecting your woodworking. Have you been able to get that sorted out?`);
+    }
+    if (lowerPhrase.includes('eat') && lowerPhrase.includes('lot') && !questions.some(q => q.includes('eating'))) {
+      questions.push(`You mentioned wanting to eat a lot. How has your relationship with food been since then?`);
     }
   });
 
