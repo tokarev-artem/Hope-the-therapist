@@ -11,6 +11,7 @@ class CompleteUserIntegration {
     this.sessionId = null;
     this.sessionStartTime = null;
     this.conversationTranscript = '';
+    this.creatingSession = false;
 
     this.init();
   }
@@ -202,9 +203,9 @@ class CompleteUserIntegration {
 
     // Show welcome message
     this.showWelcomeMessage();
-    
-    // Auto-start streaming after user creation
-    this.autoStartStreaming();
+
+    // Don't auto-start streaming here - wait for user creation to complete
+    // autoStartStreaming will be called from the userCreated event handler
   }
 
   generateUserId() {
@@ -262,23 +263,28 @@ class CompleteUserIntegration {
 
   showWelcomeMessage() {
     const greeting = this.userName
-      ? `Welcome, ${this.userName}! Ready to begin your therapeutic journey?`
-      : 'Welcome! Ready to begin your therapeutic session?';
+      ? `Welcome, ${this.userName}! Your session will start automatically in a moment...`
+      : 'Welcome! Your therapeutic session will start automatically in a moment...';
 
     this.showNotification(greeting, 'welcome', 6000);
   }
 
   autoStartStreaming() {
-    // Wait a moment for the UI to settle, then auto-start streaming
+    // Wait for the user creation process to complete, then auto-start streaming
     setTimeout(() => {
       console.log('🎙️ Auto-starting streaming session...');
-      
+
       // Find and click the start button
       const startButton = document.getElementById('start');
       if (startButton && !startButton.disabled) {
         console.log('✅ Clicking start button automatically');
+
+        // Hide the start button since we're auto-starting
+        startButton.style.display = 'none';
+
+        // Click the button to start streaming
         startButton.click();
-        
+
         // Show notification that streaming started automatically
         setTimeout(() => {
           this.showNotification('Session started automatically - speak when ready!', 'session', 4000);
@@ -286,7 +292,7 @@ class CompleteUserIntegration {
       } else {
         console.log('⚠️ Start button not found or disabled, user will need to click manually');
       }
-    }, 2000); // Wait 2 seconds for everything to initialize
+    }, 1000); // Wait 1 second for user creation to complete
   }
 
   showNotification(message, type = 'info', duration = 4000) {
@@ -331,16 +337,25 @@ class CompleteUserIntegration {
         } else {
           this.showNotification('User profile created successfully!', 'success');
         }
+
+        // Now that user is created successfully, auto-start streaming
+        console.log('🚀 User creation complete - starting auto-streaming...');
+        this.autoStartStreaming();
       } else {
-        console.warn('User processing failed:', data.error);
+        console.warn('❌ User processing failed:', data.error);
+        this.showNotification('Failed to create user. Please try again.', 'error');
       }
     });
 
     this.socket.on('sessionStarted', (data) => {
-      console.log('✅ Session started:', data);
+      console.log('✅ Session started event received:', data);
+      console.log('📊 Session creation completed at:', new Date().toISOString());
+      this.creatingSession = false; // Clear the creation flag
+
       if (data.success) {
         this.sessionId = data.sessionId;
         this.sessionStartTime = new Date().toISOString();
+        console.log('✅ Session ID assigned:', this.sessionId);
 
         // Handle session context if available
         if (data.sessionContext) {
@@ -348,6 +363,9 @@ class CompleteUserIntegration {
         } else {
           this.showNotification('Therapy session started - speak when ready!', 'session');
         }
+      } else {
+        console.error('❌ Session creation failed:', data.error);
+        this.showNotification('Failed to start session. Please try again.', 'error');
       }
     });
 
@@ -419,7 +437,7 @@ class CompleteUserIntegration {
     if (startButton) {
       startButton.addEventListener('click', () => {
         if (this.userId) {
-          console.log('🎙️ Starting therapy session...');
+          console.log('🎙️ Start button clicked - creating therapy session...');
           this.conversationTranscript = '';
           this.startSession();
         }
@@ -446,9 +464,25 @@ class CompleteUserIntegration {
 
   startSession() {
     if (!this.userId) {
-      console.error('No user ID available');
+      console.error('❌ No user ID available for session creation');
       return;
     }
+
+    // Prevent multiple session starts
+    if (this.sessionId) {
+      console.log('⚠️ Session already active:', this.sessionId, '- ignoring duplicate start request');
+      return;
+    }
+
+    // Check if we're already in the process of creating a session
+    if (this.creatingSession) {
+      console.log('⚠️ Session creation already in progress, ignoring duplicate request');
+      return;
+    }
+
+    this.creatingSession = true;
+    console.log('🎙️ Starting new therapy session for user:', this.userId);
+    console.log('📊 Session creation timestamp:', new Date().toISOString());
 
     this.socket.emit('startTherapySession', {
       userId: this.userId,

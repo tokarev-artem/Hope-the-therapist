@@ -16,12 +16,12 @@ function generateSessionSummary(transcript: string, finalEmotionalState: any): s
 
   const wordCount = transcript.split(' ').length;
   const duration = Math.ceil(wordCount / 150); // Approximate speaking duration
-  
+
   // Extract conversation topics for summary
   const conversationAnalysis = extractConversationTopics(transcript);
-  
+
   let summary = `Session completed (${duration} min, ${wordCount} words). `;
-  
+
   // Add mood information
   if (finalEmotionalState.finalMood && finalEmotionalState.initialMood) {
     const moodChange = finalEmotionalState.finalMood - finalEmotionalState.initialMood;
@@ -33,25 +33,25 @@ function generateSessionSummary(transcript: string, finalEmotionalState: any): s
       summary += `Mood remained stable at ${finalEmotionalState.finalMood}. `;
     }
   }
-  
+
   // Add topics discussed
   if (conversationAnalysis.issues.length > 0) {
     summary += `Issues discussed: ${conversationAnalysis.issues.join(', ')}. `;
   }
-  
+
   if (conversationAnalysis.topics.length > 0) {
     summary += `Topics covered: ${conversationAnalysis.topics.join(', ')}. `;
   }
-  
+
   // Add key insights
   if (conversationAnalysis.keyPhrases.length > 0) {
     summary += `Key points: ${conversationAnalysis.keyPhrases[0]}. `;
   }
-  
+
   if (finalEmotionalState.calmingEffectiveness) {
     summary += `Session effectiveness: ${finalEmotionalState.calmingEffectiveness}/10.`;
   }
-  
+
   return summary;
 }
 
@@ -61,7 +61,7 @@ function generateSessionSummary(transcript: string, finalEmotionalState: any): s
 function extractEmotionsFromTranscript(transcript: string): string[] {
   const emotions: string[] = [];
   const lowerTranscript = transcript.toLowerCase();
-  
+
   const emotionKeywords = {
     'anxious': ['anxious', 'anxiety', 'worried', 'nervous', 'stressed'],
     'sad': ['sad', 'depressed', 'down', 'upset', 'crying'],
@@ -70,13 +70,13 @@ function extractEmotionsFromTranscript(transcript: string): string[] {
     'calm': ['calm', 'peaceful', 'relaxed', 'serene', 'tranquil'],
     'hopeful': ['hopeful', 'optimistic', 'positive', 'confident', 'better']
   };
-  
+
   for (const [emotion, keywords] of Object.entries(emotionKeywords)) {
     if (keywords.some(keyword => lowerTranscript.includes(keyword))) {
       emotions.push(emotion);
     }
   }
-  
+
   return emotions.length > 0 ? emotions : ['neutral'];
 }
 
@@ -93,7 +93,7 @@ function extractConversationTopics(transcript: string): {
   }
 
   const lowerTranscript = transcript.toLowerCase();
-  
+
   // Common issue patterns
   const issuePatterns = {
     'work stress': ['boss', 'work', 'job', 'colleague', 'workplace', 'manager', 'office'],
@@ -123,9 +123,9 @@ function extractConversationTopics(transcript: string): {
   sentences.forEach(sentence => {
     const lower = sentence.toLowerCase().trim();
     // Look for sentences that contain problem indicators
-    if (lower.includes('problem') || lower.includes('issue') || lower.includes('difficult') || 
-        lower.includes('struggle') || lower.includes('help') || lower.includes('fix') ||
-        lower.includes('better') || lower.includes('improve')) {
+    if (lower.includes('problem') || lower.includes('issue') || lower.includes('difficult') ||
+      lower.includes('struggle') || lower.includes('help') || lower.includes('fix') ||
+      lower.includes('better') || lower.includes('improve')) {
       keyPhrases.push(sentence.trim());
     }
   });
@@ -158,13 +158,13 @@ function generateFollowUpQuestions(
   const questions: string[] = [];
   const name = userName ? userName : 'you';
   const lowerSummary = lastSessionSummary.toLowerCase();
-  
+
   // Generate specific questions based on key phrases and content
   if (lowerSummary.includes('boss') && (lowerSummary.includes('annoying') || lowerSummary.includes('useless'))) {
     questions.push(`How have things been with your boss since our last session, ${name}? Has the situation improved at all?`);
     questions.push(`You mentioned your boss thinks you're useless, but you know you've helped the company grow. How are you feeling about that situation now?`);
   }
-  
+
   // Generate questions based on identified issues
   if (issues.includes('work stress')) {
     if (!questions.some(q => q.includes('boss'))) { // Avoid duplicates
@@ -172,33 +172,33 @@ function generateFollowUpQuestions(
     }
     questions.push(`Have you been able to implement any stress management techniques at work?`);
   }
-  
+
   if (issues.includes('self-worth issues')) {
     questions.push(`How are you feeling about your self-worth since we last talked, ${name}? Have you been able to recognize your value?`);
   }
-  
+
   if (issues.includes('sleep problems')) {
     questions.push(`How has your sleep been since our last session, ${name}?`);
   }
-  
+
   if (issues.includes('anxiety')) {
     questions.push(`How have you been managing your anxiety since we last spoke?`);
   }
-  
+
   // Generate questions based on specific topics
   if (topics.includes('work') && !questions.some(q => q.includes('work'))) {
     questions.push(`How are things going at work, ${name}?`);
   }
-  
+
   // Generate questions based on session summary content
   if (lowerSummary.includes('mood improved')) {
     questions.push(`I'm glad to see your mood improved in our last session. How have you been feeling since then?`);
   }
-  
+
   if (lowerSummary.includes('effectiveness')) {
     questions.push(`Last time we found some helpful strategies. Have you been able to use any of them?`);
   }
-  
+
   // Use key phrases to create more specific questions
   keyPhrases.forEach(phrase => {
     const lowerPhrase = phrase.toLowerCase();
@@ -209,13 +209,13 @@ function generateFollowUpQuestions(
       questions.push(`Last time you felt your boss thought you were useless. How are you processing those feelings now?`);
     }
   });
-  
+
   // Generic follow-up if no specific issues identified
   if (questions.length === 0) {
     questions.push(`How have you been since our last session, ${name}?`);
     questions.push(`Have you had a chance to think about what we discussed last time?`);
   }
-  
+
   return questions.slice(0, 2); // Return top 2 most relevant questions
 }
 
@@ -260,8 +260,8 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
     // Parse emotional state
     let emotionalState;
     try {
-      emotionalState = typeof session.emotionalState === 'string' 
-        ? JSON.parse(session.emotionalState) 
+      emotionalState = typeof session.emotionalState === 'string'
+        ? JSON.parse(session.emotionalState)
         : session.emotionalState;
     } catch (e) {
       emotionalState = session.emotionalState || {};
@@ -308,7 +308,7 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
   if (effectiveness.length > 0) {
     analysis.patterns.effectivenessScores = effectiveness;
     const avgEffectiveness = effectiveness.reduce((a, b) => a + b, 0) / effectiveness.length;
-    
+
     if (avgEffectiveness >= 8) {
       analysis.recommendations.push('Sessions have been highly effective - continue current approach');
     } else if (avgEffectiveness >= 6) {
@@ -323,9 +323,9 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
   allEmotions.forEach(emotion => {
     emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   });
-  
+
   analysis.patterns.commonEmotions = Object.entries(emotionCounts)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([emotion]) => emotion);
 
@@ -333,22 +333,22 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
   if (sessions.length > 0) {
     const lastSession = sessions[0];
     analysis.lastSessionSummary = lastSession.conversationSummary || 'Previous session completed';
-    
+
     // Debug: Log the full session object to understand what data we have
     console.log('🔍 Full last session object:', JSON.stringify(lastSession, null, 2));
     console.log('🔍 Analyzing last session summary:', analysis.lastSessionSummary);
-    
+
     const conversationAnalysis = extractConversationTopics(analysis.lastSessionSummary);
     analysis.lastSessionIssues = conversationAnalysis.issues;
     analysis.lastSessionTopics = conversationAnalysis.topics;
     analysis.lastSessionKeyPhrases = conversationAnalysis.keyPhrases;
-    
+
     console.log('📊 Extracted conversation analysis:', {
       issues: analysis.lastSessionIssues,
       topics: analysis.lastSessionTopics,
       keyPhrases: analysis.lastSessionKeyPhrases
     });
-    
+
     // Generate personalized follow-up questions based on last session
     analysis.followUpQuestions = generateFollowUpQuestions(
       analysis.lastSessionSummary,
@@ -357,17 +357,17 @@ function analyzeSessionHistory(sessions: any[], userName?: string): any {
       analysis.lastSessionKeyPhrases,
       userName
     );
-    
+
     console.log('💬 Generated follow-up questions:', analysis.followUpQuestions);
   }
 
   // Generate contextual message for AI
-  const daysSinceLastSession = sessions.length > 0 
+  const daysSinceLastSession = sessions.length > 0
     ? Math.floor((new Date().getTime() - new Date(sessions[0].startTime).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   let contextMessage = `${userName ? userName : 'User'} has completed ${analysis.totalSessions} previous session(s). `;
-  
+
   if (daysSinceLastSession === 0) {
     contextMessage += 'Last session was today. ';
   } else if (daysSinceLastSession === 1) {
@@ -416,6 +416,9 @@ const activeUserSessions = new Map<string, {
   sessionId?: string;
   startTime?: string;
 }>();
+
+// Track session creation to prevent duplicates
+const sessionCreationLocks = new Map<string, boolean>();
 
 /**
  * Add user management to socket connection
@@ -472,7 +475,7 @@ export function addUserManagement(socket: any) {
           }
         }
       }
-      
+
       console.log('✅ User name:', data.userName || 'Anonymous');
       console.log('✅ Frontend UUID:', data.userId);
 
@@ -513,7 +516,30 @@ export function addUserManagement(socket: any) {
     initialEmotionalState: any;
   }) => {
     try {
-      console.log('Starting therapy session for user:', data.userId);
+      console.log('🚀 startTherapySession called for user:', data.userId);
+      console.log('🚀 Socket ID:', socket.id);
+      console.log('🚀 Timestamp:', new Date().toISOString());
+
+      // Check if session creation is already in progress for this user
+      if (sessionCreationLocks.get(data.userId)) {
+        console.log('⚠️ Session creation already in progress for user:', data.userId);
+        return;
+      }
+
+      // Check if user already has an active session
+      const existingSession = activeUserSessions.get(socket.id);
+      if (existingSession?.sessionId) {
+        console.log('⚠️ User already has active session:', existingSession.sessionId);
+        socket.emit('therapySessionStarted', {
+          sessionId: existingSession.sessionId,
+          success: true,
+          message: 'Session already active'
+        });
+        return;
+      }
+
+      // Set lock to prevent duplicate session creation
+      sessionCreationLocks.set(data.userId, true);
 
       // Get user info from active session
       const activeSession = activeUserSessions.get(socket.id);
@@ -522,15 +548,15 @@ export function addUserManagement(socket: any) {
       // Fetch user's previous sessions for context
       console.log('Fetching previous sessions for user:', data.userId);
       console.log('Active session info:', activeSession);
-      
+
       let previousSessions: any[] = [];
       try {
         console.log('🔍 Searching for sessions with userId:', data.userId);
         console.log('🔍 Query details: table=therapeutic-wave-sessions, index=userId-startTime-index');
-        
+
         previousSessions = await sessionsRepository.getSessionsByUserId(data.userId, 5); // Get last 5 sessions
         console.log(`📊 Found ${previousSessions.length} previous sessions for user ${data.userId}`);
-        
+
         if (previousSessions.length > 0) {
           console.log('📋 Sample session data:', {
             sessionId: previousSessions[0].sessionId,
@@ -596,6 +622,9 @@ export function addUserManagement(socket: any) {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    } finally {
+      // Always clear the lock
+      sessionCreationLocks.delete(data.userId);
     }
   });
 

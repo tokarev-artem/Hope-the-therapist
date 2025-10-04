@@ -14,19 +14,9 @@ window.addEventListener('sessionContextUpdated', (event) => {
     console.log('📊 Session context received in main.js:', event.detail);
     sessionContext = event.detail;
 
-    // Initialize session now that we have context
-    if (!sessionInitialized) {
-        console.log('🚀 Initializing session with context...');
-        initializeSession();
-    }
-
-    // If session is not yet initialized, it will use the context when it initializes
-    // If session is already initialized, we could potentially update it (but that's complex with Bedrock)
-    if (!sessionInitialized) {
-        console.log('Session context will be used when session initializes');
-    } else {
-        console.log('Session already initialized - context available for next session');
-    }
+    // Don't automatically initialize session here - let the streaming start handle it
+    // The session context is now available for when streaming actually starts
+    console.log('Session context stored - will be used when streaming starts');
 });
 
 // DOM elements
@@ -129,6 +119,32 @@ Calm: Your language should be soothing and steady.
 
 Clear: Use simple, direct sentences. Avoid clinical jargon.
 `;
+
+// Wait for session context to become available
+function waitForSessionContext() {
+    return new Promise((resolve) => {
+        if (sessionContext) {
+            resolve();
+            return;
+        }
+        
+        console.log('⏳ Waiting for session context to be available...');
+        const checkInterval = setInterval(() => {
+            if (sessionContext) {
+                console.log('✅ Session context is now available');
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100); // Check every 100ms
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            console.warn('⚠️ Timeout waiting for session context, proceeding anyway');
+            resolve();
+        }, 10000);
+    });
+}
 
 // Generate contextualized system prompt based on session history
 function getContextualizedSystemPrompt() {
@@ -317,7 +333,9 @@ async function startStreaming() {
             if (!sessionContext) {
                 console.log('⏳ Waiting for session context before initializing...');
                 statusElement.textContent = "Waiting for session context...";
-                return;
+                
+                // Wait for session context to become available
+                await waitForSessionContext();
             }
             await initializeSession();
         }
