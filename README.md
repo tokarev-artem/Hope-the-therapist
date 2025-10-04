@@ -138,13 +138,17 @@ export AWS_ACCESS_KEY_ID=""
 export AWS_SECRET_ACCESS_KEY=""
 export AWS_SESSION_TOKEN=""
 ```
+4. Create .env file 
+```
+$ cp .env.example .env
+```
 
-4. Create a KMS key for transcript encryption:
+5. Create a KMS key for transcript encryption:
 ```bash
 # Create a KMS key for encrypting therapeutic conversation transcripts
 aws kms create-key \
     --description "Hope AI Therapeutic Transcript Encryption Key" \
-    --usage ENCRYPT_DECRYPT \
+    --key-usage ENCRYPT_DECRYPT \
     --key-spec SYMMETRIC_DEFAULT \
     --region us-east-1
 ```
@@ -156,7 +160,7 @@ KMS_KEY_ID=your-kms-key-id-here
 
 **Note**: KMS encryption provides enterprise-grade security for sensitive therapeutic conversations. If no KMS key is provided, the application will fall back to local encryption for demo purposes.
 
-5. Create DynamoDB tables:
+6. Create DynamoDB tables:
 
 **Users Table:**
 ```bash
