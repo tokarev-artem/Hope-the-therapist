@@ -131,12 +131,64 @@ cd Hope-the-therapist
 npm install
 ```
 
-3. Configure AWS credentials:
+3a. Configure AWS credentials to test it locally:
 ```bash
 # Configure AWS CLI with your credentials
 export AWS_ACCESS_KEY_ID=""
 export AWS_SECRET_ACCESS_KEY=""
 export AWS_SESSION_TOKEN=""
+```
+3b. Configure AWS service role to run in AWS. Don't forget to edit your account id and kms key id. The key we will create in step 5
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "bedrock",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "dynamodb",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:<account_id>>:table/therapeutic-wave-sessions",
+                "arn:aws:dynamodb:us-east-1:<account_id>:table/therapeutic-wave-users"
+            ]
+        },
+        {
+            "Sid": "dynamodbindex",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:<account_id>:table/therapeutic-wave-sessions/index/userId-startTime-index"
+            ]
+        },
+        {
+            "Sid": "kms",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt"
+            ],
+            "Resource": [
+                "arn:aws:kms:us-east-1:<account_id>:key/<key_id>"
+            ]
+        }
+    ]
+}
 ```
 4. Create .env file 
 ```
