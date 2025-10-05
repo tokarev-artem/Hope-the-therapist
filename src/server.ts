@@ -68,7 +68,7 @@ io.on('connection', (socket) => {
 
         // Set up event handlers
         session.onEvent('contentStart', (data) => {
-            console.log('contentStart:', data);
+            // console.log('contentStart:', data);
             socket.emit('contentStart', data);
         });
 
@@ -98,7 +98,7 @@ io.on('connection', (socket) => {
         });
 
         session.onEvent('contentEnd', (data) => {
-            console.log('Content end received: ', data);
+            // console.log('Content end received: ', data);
             socket.emit('contentEnd', data);
         });
 
@@ -142,7 +142,7 @@ io.on('connection', (socket) => {
 
         socket.on('systemPrompt', async (data) => {
             try {
-                console.log('System prompt received', data);
+                // console.log('System prompt received', data);
                 await session.setupSystemPrompt(undefined, data);
             } catch (error) {
                 console.error('Error processing system prompt:', error);
