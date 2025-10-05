@@ -411,6 +411,7 @@ export class SessionsRepository extends BaseRepository {
     for (const indexName of indexCandidates) {
       // Variant A: Using userId key
       try {
+        console.log(`🔍 Trying index ${indexName} with userId = ${userId}`);
         const cmd = new QueryCommand({
           TableName: this.tableName,
           IndexName: indexName,
@@ -421,15 +422,25 @@ export class SessionsRepository extends BaseRepository {
           Limit: limit
         });
         const resp = await this.docClient.send(cmd);
+        console.log(`📊 Query result for ${indexName}:`, {
+          itemCount: resp.Items?.length || 0,
+          items: resp.Items?.map(item => ({
+            sessionId: item.sessionId,
+            startTime: item.startTime,
+            userId: item.userId
+          }))
+        });
         if (resp.Items && resp.Items.length > 0) {
           return await Promise.all(resp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession)));
         }
       } catch (e: any) {
+        console.log(`❌ Error with index ${indexName} (userId variant):`, e.message);
         // proceed to variant B
       }
 
       // Variant B: Using legacy GSI1PK (no prefix)
       try {
+        console.log(`🔍 Trying index ${indexName} with GSI1PK = ${userId}`);
         const cmdLegacy = new QueryCommand({
           TableName: this.tableName,
           IndexName: indexName,
@@ -440,10 +451,20 @@ export class SessionsRepository extends BaseRepository {
           Limit: limit
         });
         const legacyResp = await this.docClient.send(cmdLegacy);
+        console.log(`📊 Query result for ${indexName}:`, {
+          itemCount: legacyResp.Items?.length || 0,
+          items: legacyResp.Items?.map(item => ({
+            sessionId: item.sessionId,
+            startTime: item.startTime,
+            GSI1PK: item.GSI1PK,
+            GSI1SK: item.GSI1SK
+          }))
+        });
         if (legacyResp.Items && legacyResp.Items.length > 0) {
           return await Promise.all(legacyResp.Items.map(item => this.convertFromDynamoSession(item as DynamoDBSession)));
         }
       } catch (e: any) {
+        console.log(`❌ Error with index ${indexName} (GSI1PK variant):`, e.message);
         // proceed to variant C
       }
 
