@@ -244,6 +244,8 @@ aws dynamodb create-table \
   --table-name therapeutic-wave-sessions \
   --attribute-definitions \
     AttributeName=sessionId,AttributeType=S \
+    AttributeName=userId,AttributeType=S \
+    AttributeName=startTime,AttributeType=S \
     AttributeName=GSI1PK,AttributeType=S \
     AttributeName=GSI1SK,AttributeType=S \
   --key-schema AttributeName=sessionId,KeyType=HASH \
@@ -253,6 +255,14 @@ aws dynamodb create-table \
       "KeySchema": [
         {"AttributeName":"GSI1PK","KeyType":"HASH"},
         {"AttributeName":"GSI1SK","KeyType":"RANGE"}
+      ],
+      "Projection": {"ProjectionType":"ALL"}
+    },
+    {
+      "IndexName": "userId-startTime-direct-index",
+      "KeySchema": [
+        {"AttributeName":"userId","KeyType":"HASH"},
+        {"AttributeName":"startTime","KeyType":"RANGE"}
       ],
       "Projection": {"ProjectionType":"ALL"}
     }
@@ -565,3 +575,381 @@ graph TD
 - ✅ **Technical Depth** - Show AWS service integration and real-time processing
 - ✅ **Emotional Impact** - Demonstrate genuine therapeutic value and user connection
 - ✅ **Scalability Story** - Explain production-ready architecture and global deployment
+
+## 🚀 Deployment Guide
+
+Choose your deployment method based on your needs and infrastructure preferences.
+
+## Option 1: AWS CDK Deployment (Recommended)
+
+**Best for**: Production deployments, scalable infrastructure, full AWS integration
+
+### Prerequisites
+
+1. AWS CLI configured with appropriate credentials
+2. Node.js 18+ installed
+3. AWS CDK CLI installed: `npm install -g aws-cdk`
+4. **For HTTPS (Required for microphone access)**: A domain name and SSL certificate
+
+### HTTPS Setup (Required for Production)
+
+**⚠️ Important**: Modern browsers require HTTPS for microphone access. For production use, you need HTTPS.
+
+#### Get a Domain and Certificate
+1. **Get a domain** (any domain registrar or free options):
+   - **DuckDNS**: Get `yourapp.duckdns.org` for free
+   - **No-IP**: Get `yourapp.ddns.net` for free  
+   - **Freenom**: Get `.tk`, `.ml` domains for free
+   - Any paid domain registrar
+
+2. **Create hosted zone** in Route 53 for your domain
+
+3. **Request certificate** in AWS Certificate Manager:
+   ```bash
+   # Go to AWS Console > Certificate Manager > Request Certificate
+   # Enter your domain (e.g., myapp.example.com)
+   # Choose DNS validation
+   # Add the CNAME record to your domain's DNS
+   ```
+
+4. **Note the certificate ARN** (e.g., `arn:aws:acm:us-east-1:123456789:certificate/abc-123`)
+
+### CDK Deployment Steps
+
+#### Method 1: Interactive Script (Easiest)
+```bash
+./deploy.sh
+# Follow the prompts for domain and certificate setup
+```
+
+#### Method 2: Manual CDK Commands
+
+1. **Install dependencies:**
+```bash
+cd infrastructure
+npm install
+npm run build
+```
+
+2. **Bootstrap CDK** (first time only):
+```bash
+cdk bootstrap
+```
+
+3. **Deploy with HTTPS** (Production):
+```bash
+cdk deploy \
+  --parameters DomainName=myapp.example.com \
+  --parameters CertificateArn=arn:aws:acm:us-east-1:123456789:certificate/abc-123 \
+  --parameters EnableHttps=true
+```
+
+4. **OR Deploy HTTP-only** (Testing):
+```bash
+cdk deploy --parameters EnableHttps=false
+```
+
+### CDK Deployment Parameters
+
+| Parameter | Description | Example | Required |
+|-----------|-------------|---------|----------|
+| `DomainName` | Your domain name | `myapp.example.com` | No |
+| `CertificateArn` | SSL certificate ARN from ACM | `arn:aws:acm:...` | For HTTPS |
+| `EnableHttps` | Enable HTTPS protocol | `true` or `false` | No (default: false) |
+
+### What CDK Deploys
+
+- **ECS Fargate service** with WebSocket support and 5-minute timeout
+- **Application Load Balancer** with:
+  - HTTP listener (port 80) - always created
+  - HTTPS listener (port 443) - created when HTTPS is enabled
+  - Sticky sessions for WebSocket connections
+  - Automatic HTTP to HTTPS redirect (when HTTPS enabled)
+- **DynamoDB tables** for user and session data with dual GSI support
+- **KMS key** for therapeutic data encryption
+- **CloudWatch logs** and monitoring with alarms
+- **Route 53 DNS record** (if domain provided)
+- **Auto-scaling** configuration for high availability
+
+---
+
+## Option 2: EC2 Deployment (Simple)
+
+**Best for**: Quick testing, development, existing EC2 infrastructure
+
+### Prerequisites
+
+1. **EC2 instance** with:
+   - Ubuntu 20.04+ or Amazon Linux 2
+   - Node.js 18+ installed
+   - At least 2GB RAM, 1 vCPU
+   - Security group allowing HTTP (80) and HTTPS (443)
+
+2. **AWS credentials** configured on EC2:
+```bash
+aws configure
+# Enter your AWS Access Key, Secret Key, and region
+```
+
+### EC2 Setup Steps
+
+#### 1. Install Dependencies
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2 for process management
+sudo npm install -g pm2
+
+# Install nginx for reverse proxy
+sudo apt install -y nginx
+```
+
+#### 2. Deploy Application
+```bash
+# Clone repository
+git clone [your-repo-url]
+cd hope-ai-therapeutic
+
+# Install dependencies
+npm install
+
+# Build application
+npm run build
+
+# Set environment variables
+export AWS_REGION=us-east-1
+export DYNAMODB_USERS_TABLE=therapeutic-wave-users
+export DYNAMODB_SESSIONS_TABLE=therapeutic-wave-sessions
+export KMS_KEY_ID=[your-kms-key-id]
+export NODE_ENV=production
+
+# Start with PM2
+pm2 start src/server.js --name "hope-ai"
+pm2 startup
+pm2 save
+```
+
+#### 3. Setup DynamoDB Tables (Manual)
+```bash
+# Create Users Table
+aws dynamodb create-table \
+  --table-name therapeutic-wave-users \
+  --attribute-definitions \
+    AttributeName=userId,AttributeType=S \
+    AttributeName=isAnonymous,AttributeType=S \
+    AttributeName=lastActiveAt,AttributeType=S \
+  --key-schema AttributeName=userId,KeyType=HASH \
+  --global-secondary-indexes '[
+    {
+      "IndexName": "isAnonymous-lastActiveAt-index",
+      "KeySchema": [
+        {"AttributeName":"isAnonymous","KeyType":"HASH"},
+        {"AttributeName":"lastActiveAt","KeyType":"RANGE"}
+      ],
+      "Projection": {"ProjectionType":"ALL"}
+    }
+  ]' \
+  --billing-mode PAY_PER_REQUEST \
+  --region us-east-1
+
+# Create Sessions Table
+aws dynamodb create-table \
+  --table-name therapeutic-wave-sessions \
+  --attribute-definitions \
+    AttributeName=sessionId,AttributeType=S \
+    AttributeName=userId,AttributeType=S \
+    AttributeName=startTime,AttributeType=S \
+    AttributeName=GSI1PK,AttributeType=S \
+    AttributeName=GSI1SK,AttributeType=S \
+  --key-schema AttributeName=sessionId,KeyType=HASH \
+  --global-secondary-indexes '[
+    {
+      "IndexName": "userId-startTime-index",
+      "KeySchema": [
+        {"AttributeName":"GSI1PK","KeyType":"HASH"},
+        {"AttributeName":"GSI1SK","KeyType":"RANGE"}
+      ],
+      "Projection": {"ProjectionType":"ALL"}
+    },
+    {
+      "IndexName": "userId-startTime-direct-index",
+      "KeySchema": [
+        {"AttributeName":"userId","KeyType":"HASH"},
+        {"AttributeName":"startTime","KeyType":"RANGE"}
+      ],
+      "Projection": {"ProjectionType":"ALL"}
+    }
+  ]' \
+  --billing-mode PAY_PER_REQUEST \
+  --region us-east-1
+```
+
+#### 4. Setup HTTPS with Let's Encrypt (Free SSL)
+```bash
+# Install Certbot
+sudo apt install -y certbot python3-certbot-nginx
+
+# Get SSL certificate (replace with your domain)
+sudo certbot --nginx -d yourdomain.com
+
+# Configure Nginx
+sudo nano /etc/nginx/sites-available/default
+```
+
+**Nginx Configuration:**
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    # WebSocket support
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # WebSocket timeout settings
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}
+```
+
+```bash
+# Test and reload Nginx
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Setup auto-renewal for SSL
+sudo crontab -e
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+### EC2 Monitoring and Maintenance
+```bash
+# Check application status
+pm2 status
+pm2 logs hope-ai
+
+# Monitor system resources
+htop
+df -h
+
+# Update application
+git pull
+npm install
+npm run build
+pm2 restart hope-ai
+```
+
+---
+
+## Testing Without HTTPS (Development Only)
+
+If you need to test without HTTPS setup:
+
+### Option 1: ngrok (Easiest)
+```bash
+npm install -g ngrok
+ngrok http [your-server-url]:80
+# Use the https://xxx.ngrok.io URL
+```
+
+### Option 2: Chrome with Flags (Testing Only)
+```bash
+chrome --unsafely-treat-insecure-origin-as-secure=http://your-server-url \
+       --user-data-dir=/tmp/test-profile
+```
+
+---
+
+## Post-Deployment Verification
+
+### 1. Check Application Health
+- Visit your HTTPS URL
+- Verify microphone permissions work
+- Test voice conversation functionality
+
+### 2. Monitor AWS Resources (CDK only)
+- Check CloudWatch logs for errors
+- Monitor DynamoDB table metrics
+- Verify ECS service is running
+
+### 3. Performance Testing
+- Test WebSocket connection stability
+- Verify 5-minute timeout handling
+- Check auto-scaling behavior under load
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Microphone Not Working:**
+- ✅ Ensure you're using HTTPS
+- ✅ Check browser permissions
+- ✅ Try different browsers (Chrome, Firefox, Safari)
+
+**WebSocket Timeouts:**
+- ✅ Verify load balancer timeout settings (5 minutes)
+- ✅ Check sticky sessions are enabled
+- ✅ Monitor CloudWatch logs for connection drops
+
+**DynamoDB Errors:**
+- ✅ Verify table names match environment variables
+- ✅ Check IAM permissions for DynamoDB access
+- ✅ Monitor GSI backfill status (new deployments)
+
+**SSL Certificate Issues:**
+- ✅ Verify certificate covers your domain
+- ✅ Check certificate is in the correct AWS region
+- ✅ Ensure DNS validation is complete
+
+### Getting Help
+
+1. **Check CloudWatch Logs** (CDK deployment)
+2. **Check PM2 logs** (EC2 deployment): `pm2 logs hope-ai`
+3. **Verify AWS credentials**: `aws sts get-caller-identity`
+4. **Test DynamoDB access**: `aws dynamodb list-tables`
+
+---
+
+## Quick Start Summary
+
+### CDK (Production)
+```bash
+./deploy.sh  # Interactive setup
+# OR
+cdk deploy --parameters EnableHttps=true --parameters DomainName=yourdomain.com --parameters CertificateArn=arn:aws:acm:...
+```
+
+### EC2 (Development)
+```bash
+git clone [repo] && cd hope-ai-therapeutic
+npm install && npm run build
+pm2 start src/server.js --name hope-ai
+# Setup nginx + Let's Encrypt for HTTPS
+```
+
+Both methods give you a fully functional Hope AI Therapeutic Companion! 🚀

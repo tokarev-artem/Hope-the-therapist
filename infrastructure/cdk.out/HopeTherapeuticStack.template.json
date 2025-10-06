@@ -1,0 +1,2145 @@
+{
+ "Parameters": {
+  "DomainName": {
+   "Type": "String",
+   "Default": "",
+   "Description": "Domain name for the application (e.g., myapp.example.com). Leave empty for HTTP-only deployment."
+  },
+  "CertificateArn": {
+   "Type": "String",
+   "Default": "",
+   "Description": "ARN of the SSL certificate from AWS Certificate Manager. Required if domain name is provided."
+  },
+  "EnableHttps": {
+   "Type": "String",
+   "Default": "false",
+   "AllowedValues": [
+    "true",
+    "false"
+   ],
+   "Description": "Enable HTTPS (required for microphone access in browsers)"
+  },
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Resources": {
+  "TherapeuticDataKey666CAA60": {
+   "Type": "AWS::KMS::Key",
+   "Properties": {
+    "Description": "Hope AI Therapeutic Transcript Encryption Key",
+    "EnableKeyRotation": true,
+    "KeyPolicy": {
+     "Statement": [
+      {
+       "Action": "kms:*",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "arn:aws:iam::339713181866:root"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/TherapeuticDataKey/Resource"
+   }
+  },
+  "TherapeuticDataKeyAlias0D481ED3": {
+   "Type": "AWS::KMS::Alias",
+   "Properties": {
+    "AliasName": "alias/hope-therapeutic-data",
+    "TargetKeyId": {
+     "Fn::GetAtt": [
+      "TherapeuticDataKey666CAA60",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/TherapeuticDataKeyAlias/Resource"
+   }
+  },
+  "TherapeuticUsersTableA484CF07": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "isAnonymous",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "lastActiveAt",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "isAnonymous-lastActiveAt-index",
+      "KeySchema": [
+       {
+        "AttributeName": "isAnonymous",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "lastActiveAt",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "StreamSpecification": {
+     "StreamViewType": "NEW_AND_OLD_IMAGES"
+    },
+    "TableName": "therapeutic-wave-users"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/TherapeuticUsersTable/Resource"
+   }
+  },
+  "TherapeuticSessionsTable616A6A8B": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "sessionId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "GSI1PK",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "GSI1SK",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "startTime",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "userId-startTime-index",
+      "KeySchema": [
+       {
+        "AttributeName": "GSI1PK",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "GSI1SK",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     },
+     {
+      "IndexName": "userId-startTime-direct-index",
+      "KeySchema": [
+       {
+        "AttributeName": "userId",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "startTime",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "sessionId",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "KMSMasterKeyId": {
+      "Fn::GetAtt": [
+       "TherapeuticDataKey666CAA60",
+       "Arn"
+      ]
+     },
+     "SSEEnabled": true,
+     "SSEType": "KMS"
+    },
+    "StreamSpecification": {
+     "StreamViewType": "NEW_AND_OLD_IMAGES"
+    },
+    "TableName": "therapeutic-wave-sessions"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/TherapeuticSessionsTable/Resource"
+   }
+  },
+  "HopeTherapeuticVPC07FF7BCF": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/Resource"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1Subnet0827E39A": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.0.0.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1RouteTable18F00915": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1RouteTableAssociation5FC16BEA": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1RouteTable18F00915"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1Subnet0827E39A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1DefaultRoute64EC53FE": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "HopeTherapeuticVPCIGW864B7C7D"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1RouteTable18F00915"
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCVPCGWAC000235"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1EIPD87BE605": {
+   "Type": "AWS::EC2::EIP",
+   "Properties": {
+    "Domain": "vpc",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/EIP"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet1NATGatewayE5555568": {
+   "Type": "AWS::EC2::NatGateway",
+   "Properties": {
+    "AllocationId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticVPCPublicSubnet1EIPD87BE605",
+      "AllocationId"
+     ]
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1Subnet0827E39A"
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1"
+     }
+    ]
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCPublicSubnet1DefaultRoute64EC53FE",
+    "HopeTherapeuticVPCPublicSubnet1RouteTableAssociation5FC16BEA"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet1/NATGateway"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2Subnet3CE0E596": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "CidrBlock": "10.0.1.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2RouteTable557DFFF0": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2RouteTableAssociationC799393F": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet2RouteTable557DFFF0"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet2Subnet3CE0E596"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2DefaultRouteF65FD1F3": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "HopeTherapeuticVPCIGW864B7C7D"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet2RouteTable557DFFF0"
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCVPCGWAC000235"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2EIPD45D2BEF": {
+   "Type": "AWS::EC2::EIP",
+   "Properties": {
+    "Domain": "vpc",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/EIP"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet2NATGatewayBA0DAA92": {
+   "Type": "AWS::EC2::NatGateway",
+   "Properties": {
+    "AllocationId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticVPCPublicSubnet2EIPD45D2BEF",
+      "AllocationId"
+     ]
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet2Subnet3CE0E596"
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2"
+     }
+    ]
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCPublicSubnet2DefaultRouteF65FD1F3",
+    "HopeTherapeuticVPCPublicSubnet2RouteTableAssociationC799393F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet2/NATGateway"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet3Subnet5AEBBC5A": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1c",
+    "CidrBlock": "10.0.2.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet3RouteTable5BBD643B": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet3RouteTableAssociation917D9C75": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet3RouteTable5BBD643B"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet3Subnet5AEBBC5A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPublicSubnet3DefaultRoute45B1366F": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "HopeTherapeuticVPCIGW864B7C7D"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet3RouteTable5BBD643B"
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCVPCGWAC000235"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PublicSubnet3/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet1Subnet3499FBC2": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.0.3.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet1RouteTableD9C4C154": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet1RouteTableAssociation8746EE16": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet1RouteTableD9C4C154"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet1Subnet3499FBC2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet1DefaultRoute73897E2E": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1NATGatewayE5555568"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet1RouteTableD9C4C154"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet1/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet2Subnet5C4C8691": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "CidrBlock": "10.0.4.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet2RouteTable6994AF18": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet2RouteTableAssociationB884A25E": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet2RouteTable6994AF18"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet2Subnet5C4C8691"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet2DefaultRoute0DE1A827": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet2NATGatewayBA0DAA92"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet2RouteTable6994AF18"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet2/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet3Subnet2F632DE8": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1c",
+    "CidrBlock": "10.0.5.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3/Subnet"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet3RouteTable6B48BF5C": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3/RouteTable"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet3RouteTableAssociation96DC0875": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet3RouteTable6B48BF5C"
+    },
+    "SubnetId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet3Subnet2F632DE8"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3/RouteTableAssociation"
+   }
+  },
+  "HopeTherapeuticVPCPrivateSubnet3DefaultRoute3840277F": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "HopeTherapeuticVPCPublicSubnet1NATGatewayE5555568"
+    },
+    "RouteTableId": {
+     "Ref": "HopeTherapeuticVPCPrivateSubnet3RouteTable6B48BF5C"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/PrivateSubnet3/DefaultRoute"
+   }
+  },
+  "HopeTherapeuticVPCIGW864B7C7D": {
+   "Type": "AWS::EC2::InternetGateway",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "HopeTherapeuticStack/HopeTherapeuticVPC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/IGW"
+   }
+  },
+  "HopeTherapeuticVPCVPCGWAC000235": {
+   "Type": "AWS::EC2::VPCGatewayAttachment",
+   "Properties": {
+    "InternetGatewayId": {
+     "Ref": "HopeTherapeuticVPCIGW864B7C7D"
+    },
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/VPCGW"
+   }
+  },
+  "HopeTherapeuticVPCRestrictDefaultSecurityGroupCustomResource9F291CC2": {
+   "Type": "Custom::VpcRestrictDefaultSG",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E",
+      "Arn"
+     ]
+    },
+    "DefaultSecurityGroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticVPC07FF7BCF",
+      "DefaultSecurityGroup"
+     ]
+    },
+    "Account": "339713181866"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticVPC/RestrictDefaultSecurityGroupCustomResource/Default"
+   }
+  },
+  "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyName": "Inline",
+      "PolicyDocument": {
+       "Version": "2012-10-17",
+       "Statement": [
+        {
+         "Effect": "Allow",
+         "Action": [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress"
+         ],
+         "Resource": [
+          {
+           "Fn::Join": [
+            "",
+            [
+             "arn:aws:ec2:us-east-1:339713181866:security-group/",
+             {
+              "Fn::GetAtt": [
+               "HopeTherapeuticVPC07FF7BCF",
+               "DefaultSecurityGroup"
+              ]
+             }
+            ]
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Role"
+   }
+  },
+  "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-339713181866-us-east-1",
+     "S3Key": "7f18a11296f35510ee16538afec983ed6312e12afbf81b777089a9f8e34e2474.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "__entrypoint__.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs18.x",
+    "Description": "Lambda function for removing all inbound/outbound rules from the VPC default security group"
+   },
+   "DependsOn": [
+    "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/Custom::VpcRestrictDefaultSGCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.7f18a11296f35510ee16538afec983ed6312e12afbf81b777089a9f8e34e2474",
+    "aws:asset:property": "Code"
+   }
+  },
+  "HopeTherapeuticCluster9A8FE046": {
+   "Type": "AWS::ECS::Cluster",
+   "Properties": {
+    "ClusterName": "hope-therapeutic-cluster",
+    "ClusterSettings": [
+     {
+      "Name": "containerInsights",
+      "Value": "enabled"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticCluster/Resource"
+   }
+  },
+  "HopeTherapeuticTaskRole765CB011": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Role for Hope Therapeutic ECS tasks"
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticTaskRole/Resource"
+   }
+  },
+  "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0",
+        "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-sonic-v1:0"
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:DeleteItem",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "TherapeuticSessionsTable616A6A8B",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::GetAtt": [
+          "TherapeuticUsersTableA484CF07",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TherapeuticSessionsTable616A6A8B",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TherapeuticUsersTableA484CF07",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:Encrypt",
+        "kms:GenerateDataKey*",
+        "kms:ReEncrypt*"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "TherapeuticDataKey666CAA60",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "Roles": [
+     {
+      "Ref": "HopeTherapeuticTaskRole765CB011"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticTaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "HopeTherapeuticLogGroupDC5C2982": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/ecs/hope-therapeutic",
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticLogGroup/Resource"
+   }
+  },
+  "HopeTherapeuticServiceLB3D20552D": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     },
+     {
+      "Key": "idle_timeout.timeout_seconds",
+      "Value": "300"
+     },
+     {
+      "Key": "routing.http2.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "HopeTherapeuticServiceLBSecurityGroupC1E62BB0",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     {
+      "Ref": "HopeTherapeuticVPCPublicSubnet1Subnet0827E39A"
+     },
+     {
+      "Ref": "HopeTherapeuticVPCPublicSubnet2Subnet3CE0E596"
+     },
+     {
+      "Ref": "HopeTherapeuticVPCPublicSubnet3Subnet5AEBBC5A"
+     }
+    ],
+    "Type": "application"
+   },
+   "DependsOn": [
+    "HopeTherapeuticVPCPublicSubnet1DefaultRoute64EC53FE",
+    "HopeTherapeuticVPCPublicSubnet1RouteTableAssociation5FC16BEA",
+    "HopeTherapeuticVPCPublicSubnet2DefaultRouteF65FD1F3",
+    "HopeTherapeuticVPCPublicSubnet2RouteTableAssociationC799393F",
+    "HopeTherapeuticVPCPublicSubnet3DefaultRoute45B1366F",
+    "HopeTherapeuticVPCPublicSubnet3RouteTableAssociation917D9C75"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/LB/Resource"
+   }
+  },
+  "HopeTherapeuticServiceLBSecurityGroupC1E62BB0": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Automatically created Security Group for ELB HopeTherapeuticStackHopeTherapeuticServiceLB6B03381A",
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/LB/SecurityGroup/Resource"
+   }
+  },
+  "HopeTherapeuticServiceLBSecurityGrouptoHopeTherapeuticStackHopeTherapeuticServiceSecurityGroupE5856F9A3000F9576122": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceSecurityGroup68CB4913",
+      "GroupId"
+     ]
+    },
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceLBSecurityGroupC1E62BB0",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 3000
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/LB/SecurityGroup/to HopeTherapeuticStackHopeTherapeuticServiceSecurityGroupE5856F9A:3000"
+   }
+  },
+  "HopeTherapeuticServiceLBPublicListenerE2FC34AA": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "HopeTherapeuticServiceLBPublicListenerECSGroupF1CB7330"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "HopeTherapeuticServiceLB3D20552D"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/LB/PublicListener/Resource"
+   }
+  },
+  "HopeTherapeuticServiceLBPublicListenerECSGroupF1CB7330": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPath": "/health",
+    "HealthCheckTimeoutSeconds": 10,
+    "HealthyThresholdCount": 2,
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Port": 80,
+    "Protocol": "HTTP",
+    "TargetGroupAttributes": [
+     {
+      "Key": "stickiness.enabled",
+      "Value": "true"
+     },
+     {
+      "Key": "stickiness.type",
+      "Value": "lb_cookie"
+     },
+     {
+      "Key": "stickiness.lb_cookie.duration_seconds",
+      "Value": "3600"
+     }
+    ],
+    "TargetType": "ip",
+    "UnhealthyThresholdCount": 5,
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/LB/PublicListener/ECSGroup/Resource"
+   }
+  },
+  "HopeTherapeuticServiceTaskDef035259A7": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "AWS_REGION",
+        "Value": "us-east-1"
+       },
+       {
+        "Name": "DYNAMODB_USERS_TABLE",
+        "Value": {
+         "Ref": "TherapeuticUsersTableA484CF07"
+        }
+       },
+       {
+        "Name": "DYNAMODB_SESSIONS_TABLE",
+        "Value": {
+         "Ref": "TherapeuticSessionsTable616A6A8B"
+        }
+       },
+       {
+        "Name": "KMS_KEY_ID",
+        "Value": {
+         "Ref": "TherapeuticDataKey666CAA60"
+        }
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Sub": "339713181866.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-339713181866-us-east-1:4c6683d7aea609e853be14e9ea4411044e4aa519cfd7bbf447e600ecf7fc2e40"
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "HopeTherapeuticLogGroupDC5C2982"
+        },
+        "awslogs-stream-prefix": "hope-therapeutic",
+        "awslogs-region": "us-east-1"
+       }
+      },
+      "Name": "web",
+      "PortMappings": [
+       {
+        "ContainerPort": 3000,
+        "Protocol": "tcp"
+       }
+      ]
+     }
+    ],
+    "Cpu": "1024",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceTaskDefExecutionRole9A0B2851",
+      "Arn"
+     ]
+    },
+    "Family": "HopeTherapeuticStackHopeTherapeuticServiceTaskDef7242D9E8",
+    "Memory": "2048",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticTaskRole765CB011",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/TaskDef/Resource"
+   }
+  },
+  "HopeTherapeuticServiceTaskDefExecutionRole9A0B2851": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/TaskDef/ExecutionRole/Resource"
+   }
+  },
+  "HopeTherapeuticServiceTaskDefExecutionRoleDefaultPolicy2C8DA2C3": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": "arn:aws:ecr:us-east-1:339713181866:repository/cdk-hnb659fds-container-assets-339713181866-us-east-1"
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "HopeTherapeuticLogGroupDC5C2982",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "HopeTherapeuticServiceTaskDefExecutionRoleDefaultPolicy2C8DA2C3",
+    "Roles": [
+     {
+      "Ref": "HopeTherapeuticServiceTaskDefExecutionRole9A0B2851"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/TaskDef/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "HopeTherapeuticService223446B7": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Ref": "HopeTherapeuticCluster9A8FE046"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 50
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "web",
+      "ContainerPort": 3000,
+      "TargetGroupArn": {
+       "Ref": "HopeTherapeuticServiceLBPublicListenerECSGroupF1CB7330"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "HopeTherapeuticServiceSecurityGroup68CB4913",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "HopeTherapeuticVPCPrivateSubnet1Subnet3499FBC2"
+       },
+       {
+        "Ref": "HopeTherapeuticVPCPrivateSubnet2Subnet5C4C8691"
+       },
+       {
+        "Ref": "HopeTherapeuticVPCPrivateSubnet3Subnet2F632DE8"
+       }
+      ]
+     }
+    },
+    "ServiceName": "hope-therapeutic-service",
+    "TaskDefinition": {
+     "Ref": "HopeTherapeuticServiceTaskDef035259A7"
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticServiceLBPublicListenerECSGroupF1CB7330",
+    "HopeTherapeuticServiceLBPublicListenerE2FC34AA",
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/Service"
+   }
+  },
+  "HopeTherapeuticServiceSecurityGroup68CB4913": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "HopeTherapeuticStack/HopeTherapeuticService/Service/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "HopeTherapeuticVPC07FF7BCF"
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/SecurityGroup/Resource"
+   }
+  },
+  "HopeTherapeuticServiceSecurityGroupfromHopeTherapeuticStackHopeTherapeuticServiceLBSecurityGroup184BEDA53000E69822C0": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceSecurityGroup68CB4913",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceLBSecurityGroupC1E62BB0",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3000
+   },
+   "DependsOn": [
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/SecurityGroup/from HopeTherapeuticStackHopeTherapeuticServiceLBSecurityGroup184BEDA5:3000"
+   }
+  },
+  "HopeTherapeuticServiceTaskCountTarget6C472272": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 20,
+    "MinCapacity": 2,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Ref": "HopeTherapeuticCluster9A8FE046"
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "HopeTherapeuticService223446B7",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": "arn:aws:iam::339713181866:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "DependsOn": [
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/TaskCount/Target/Resource"
+   }
+  },
+  "HopeTherapeuticServiceTaskCountTargetCpuScalingA81D5080": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "HopeTherapeuticStackHopeTherapeuticServiceTaskCountTargetCpuScaling1F9DC224",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "HopeTherapeuticServiceTaskCountTarget6C472272"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 300,
+     "ScaleOutCooldown": 120,
+     "TargetValue": 70
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/TaskCount/Target/CpuScaling/Resource"
+   }
+  },
+  "HopeTherapeuticServiceTaskCountTargetMemoryScaling888B91C8": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "HopeTherapeuticStackHopeTherapeuticServiceTaskCountTargetMemoryScalingD54A11BD",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "HopeTherapeuticServiceTaskCountTarget6C472272"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageMemoryUtilization"
+     },
+     "ScaleInCooldown": 300,
+     "ScaleOutCooldown": 120,
+     "TargetValue": 80
+    }
+   },
+   "DependsOn": [
+    "HopeTherapeuticTaskRoleDefaultPolicyB6CA5B66",
+    "HopeTherapeuticTaskRole765CB011"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HopeTherapeuticService/Service/TaskCount/Target/MemoryScaling/Resource"
+   }
+  },
+  "HttpsListener": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "Certificates": [
+     {
+      "CertificateArn": {
+       "Ref": "CertificateArn"
+      }
+     }
+    ],
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "HopeTherapeuticServiceLBPublicListenerECSGroupF1CB7330"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "HopeTherapeuticServiceLB3D20552D"
+    },
+    "Port": 443,
+    "Protocol": "HTTPS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HttpsListener"
+   },
+   "Condition": "EnableHttpsCondition"
+  },
+  "HttpsSecurityGroupRule": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "CidrIp": "0.0.0.0/0",
+    "Description": "Allow HTTPS traffic from anywhere",
+    "FromPort": 443,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "HopeTherapeuticServiceLBSecurityGroupC1E62BB0",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 443
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HttpsSecurityGroupRule"
+   },
+   "Condition": "EnableHttpsCondition"
+  },
+  "HttpToHttpsRedirect": {
+   "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+   "Properties": {
+    "Actions": [
+     {
+      "RedirectConfig": {
+       "Port": "443",
+       "Protocol": "HTTPS",
+       "StatusCode": "HTTP_301"
+      },
+      "Type": "redirect"
+     }
+    ],
+    "Conditions": [
+     {
+      "Field": "path-pattern",
+      "Values": [
+       "*"
+      ]
+     }
+    ],
+    "ListenerArn": {
+     "Ref": "HopeTherapeuticServiceLBPublicListenerE2FC34AA"
+    },
+    "Priority": 1
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HttpToHttpsRedirect"
+   },
+   "Condition": "EnableHttpsCondition"
+  },
+  "HighCpuAlarm40723000": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "High CPU utilization in Hope Therapeutic service",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "ClusterName",
+      "Value": {
+       "Ref": "HopeTherapeuticCluster9A8FE046"
+      }
+     },
+     {
+      "Name": "ServiceName",
+      "Value": {
+       "Fn::GetAtt": [
+        "HopeTherapeuticService223446B7",
+        "Name"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "CPUUtilization",
+    "Namespace": "AWS/ECS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Threshold": 85,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HighCpuAlarm/Resource"
+   }
+  },
+  "HighMemoryAlarmB77DAB20": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "High memory utilization in Hope Therapeutic service",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "ClusterName",
+      "Value": {
+       "Ref": "HopeTherapeuticCluster9A8FE046"
+      }
+     },
+     {
+      "Name": "ServiceName",
+      "Value": {
+       "Fn::GetAtt": [
+        "HopeTherapeuticService223446B7",
+        "Name"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "MemoryUtilization",
+    "Namespace": "AWS/ECS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Threshold": 90,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/HighMemoryAlarm/Resource"
+   }
+  },
+  "UsersTableThrottleAlarm5EE12A47": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "DynamoDB throttling on users table",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 2,
+    "Metrics": [
+     {
+      "Expression": "putitem + getitem",
+      "Id": "expr_1",
+      "Label": "Sum of throttled requests across all operations"
+     },
+     {
+      "Id": "putitem",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "Operation",
+          "Value": "PutItem"
+         },
+         {
+          "Name": "TableName",
+          "Value": {
+           "Ref": "TherapeuticUsersTableA484CF07"
+          }
+         }
+        ],
+        "MetricName": "ThrottledRequests",
+        "Namespace": "AWS/DynamoDB"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": false
+     },
+     {
+      "Id": "getitem",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "Operation",
+          "Value": "GetItem"
+         },
+         {
+          "Name": "TableName",
+          "Value": {
+           "Ref": "TherapeuticUsersTableA484CF07"
+          }
+         }
+        ],
+        "MetricName": "ThrottledRequests",
+        "Namespace": "AWS/DynamoDB"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": false
+     }
+    ],
+    "Threshold": 5
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/UsersTableThrottleAlarm/Resource"
+   }
+  },
+  "SessionsTableThrottleAlarm88EDBC28": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "DynamoDB throttling on sessions table",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 2,
+    "Metrics": [
+     {
+      "Expression": "putitem + getitem + query",
+      "Id": "expr_1",
+      "Label": "Sum of throttled requests across all operations"
+     },
+     {
+      "Id": "putitem",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "Operation",
+          "Value": "PutItem"
+         },
+         {
+          "Name": "TableName",
+          "Value": {
+           "Ref": "TherapeuticSessionsTable616A6A8B"
+          }
+         }
+        ],
+        "MetricName": "ThrottledRequests",
+        "Namespace": "AWS/DynamoDB"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": false
+     },
+     {
+      "Id": "getitem",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "Operation",
+          "Value": "GetItem"
+         },
+         {
+          "Name": "TableName",
+          "Value": {
+           "Ref": "TherapeuticSessionsTable616A6A8B"
+          }
+         }
+        ],
+        "MetricName": "ThrottledRequests",
+        "Namespace": "AWS/DynamoDB"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": false
+     },
+     {
+      "Id": "query",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "Operation",
+          "Value": "Query"
+         },
+         {
+          "Name": "TableName",
+          "Value": {
+           "Ref": "TherapeuticSessionsTable616A6A8B"
+          }
+         }
+        ],
+        "MetricName": "ThrottledRequests",
+        "Namespace": "AWS/DynamoDB"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": false
+     }
+    ],
+    "Threshold": 5
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/SessionsTableThrottleAlarm/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31UTW/bMAz9LbsrWprLzmnaFcGK1rCDXgNGZl3VtmTow4ER+L+PkuI4zYqd+PRIiuQz5RW/Wy758gcc7UKU9aKRB34qHIiabd5VBgZadGgY+fenurX89AeH4Apm3Uiw4RDByMpBQatLumEHhwaDJ4KRoVjx01snAvWWbVjmD40UhT8odIGbUa69w0t64mduba0WEpzU6hIcwOM2C+YF3BM4PMLAMiN7gvPFW0VzEJ4CUifn09rRyB8tKscKFN5INzwZ7bvYw3+Jx8qgtf/QWxX5MDlptmm8DSpS1AR/g6kgTGXrB3yXSk4z3TJaOZAKzRV3zi3Q9FIknc6wENAEncIlG+2VG5mElp9ynfSMNtOkfRQgoZE1uqIun3V1mXHCcYB9By6IZ/m66ygj6v+sobynakpgedMQNmCdFA1FHGKEVFVPC/B9tkn1rs7XcZLUUueYCV/5d1SZvunU9s1xysh9WkKzB2vRWf6gRY1m20IVVooWhHw8x05b6bQZ7sEig7kKeKctSUtz0Ou4aBxqRfW/MsnsDD0iSihS3iz6F2JkJJMvj+DEBwnUgGnTgyIwjixHq70J35i2RrfzkT7l967M6F6WQaQwF73kimqF+FfvOh/bpZUq4yKNTOkS+af92a9W/O4X/Qc+rZQLQ4sjW+R5sn8BxuWCyiQEAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "HopeTherapeuticStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "HopeTherapeuticServiceLoadBalancerDNSA31D13D2": {
+   "Value": {
+    "Fn::GetAtt": [
+     "HopeTherapeuticServiceLB3D20552D",
+     "DNSName"
+    ]
+   }
+  },
+  "HopeTherapeuticServiceServiceURL9D0CC410": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "HopeTherapeuticServiceLB3D20552D",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "LoadBalancerDNS": {
+   "Description": "DNS name of the load balancer",
+   "Value": {
+    "Fn::GetAtt": [
+     "HopeTherapeuticServiceLB3D20552D",
+     "DNSName"
+    ]
+   },
+   "Export": {
+    "Name": "HopeTherapeuticLoadBalancerDNS"
+   }
+  },
+  "ServiceURL": {
+   "Description": "URL of the Hope Therapeutic service",
+   "Value": {
+    "Fn::If": [
+     "EnableHttpsCondition",
+     {
+      "Fn::Join": [
+       "",
+       [
+        "https://",
+        {
+         "Ref": "DomainName"
+        }
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "http://",
+        {
+         "Ref": "DomainName"
+        }
+       ]
+      ]
+     }
+    ]
+   },
+   "Export": {
+    "Name": "HopeTherapeuticServiceURL"
+   }
+  },
+  "LoadBalancerURL": {
+   "Description": "Direct load balancer URL (use this if domain is not configured)",
+   "Value": {
+    "Fn::If": [
+     "EnableHttpsCondition",
+     {
+      "Fn::Join": [
+       "",
+       [
+        "https://",
+        {
+         "Fn::GetAtt": [
+          "HopeTherapeuticServiceLB3D20552D",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "http://",
+        {
+         "Fn::GetAtt": [
+          "HopeTherapeuticServiceLB3D20552D",
+          "DNSName"
+         ]
+        }
+       ]
+      ]
+     }
+    ]
+   },
+   "Export": {
+    "Name": "HopeTherapeuticLoadBalancerURL"
+   }
+  },
+  "HttpsURL": {
+   "Description": "HTTPS URL for secure microphone access",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "HopeTherapeuticServiceLB3D20552D",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   },
+   "Condition": "EnableHttpsCondition"
+  },
+  "HttpURL": {
+   "Description": "HTTP URL (will redirect to HTTPS)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "HopeTherapeuticServiceLB3D20552D",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   },
+   "Condition": "EnableHttpsCondition"
+  },
+  "KMSKeyId": {
+   "Description": "KMS Key ID for therapeutic data encryption",
+   "Value": {
+    "Ref": "TherapeuticDataKey666CAA60"
+   },
+   "Export": {
+    "Name": "HopeTherapeuticKMSKeyId"
+   }
+  },
+  "KMSKeyArn": {
+   "Description": "KMS Key ARN for therapeutic data encryption",
+   "Value": {
+    "Fn::GetAtt": [
+     "TherapeuticDataKey666CAA60",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "HopeTherapeuticKMSKeyArn"
+   }
+  },
+  "UsersTableName": {
+   "Description": "DynamoDB Users Table Name",
+   "Value": {
+    "Ref": "TherapeuticUsersTableA484CF07"
+   },
+   "Export": {
+    "Name": "HopeTherapeuticUsersTable"
+   }
+  },
+  "SessionsTableName": {
+   "Description": "DynamoDB Sessions Table Name",
+   "Value": {
+    "Ref": "TherapeuticSessionsTable616A6A8B"
+   },
+   "Export": {
+    "Name": "HopeTherapeuticSessionsTable"
+   }
+  },
+  "ClusterName": {
+   "Description": "ECS Cluster Name",
+   "Value": {
+    "Ref": "HopeTherapeuticCluster9A8FE046"
+   },
+   "Export": {
+    "Name": "HopeTherapeuticClusterName"
+   }
+  },
+  "ServiceName": {
+   "Description": "ECS Service Name",
+   "Value": {
+    "Fn::GetAtt": [
+     "HopeTherapeuticService223446B7",
+     "Name"
+    ]
+   },
+   "Export": {
+    "Name": "HopeTherapeuticServiceName"
+   }
+  }
+ },
+ "Conditions": {
+  "EnableHttpsCondition": {
+   "Fn::And": [
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "EnableHttps"
+      },
+      "true"
+     ]
+    },
+    {
+     "Fn::Not": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "CertificateArn"
+        },
+        ""
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
