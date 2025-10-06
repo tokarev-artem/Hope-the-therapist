@@ -17,3 +17,4 @@ dist/
 output/*
 
 .env
+infrastructure/cdk.out/*
