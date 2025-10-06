@@ -685,10 +685,57 @@ cdk deploy --parameters EnableHttps=false
    - At least 2GB RAM, 1 vCPU
    - Security group allowing HTTP (80) and HTTPS (443)
 
-2. **AWS credentials** configured on EC2:
+2. **IAM Role** configured on EC2:
 ```bash
-aws configure
-# Enter your AWS Access Key, Secret Key, and region
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "bedrock",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "dynamodb",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:<account_id>>:table/therapeutic-wave-sessions",
+                "arn:aws:dynamodb:us-east-1:<account_id>:table/therapeutic-wave-users"
+            ]
+        },
+        {
+            "Sid": "dynamodbindex",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:<account_id>:table/therapeutic-wave-sessions/index/userId-startTime-index"
+            ]
+        },
+        {
+            "Sid": "kms",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt"
+            ],
+            "Resource": [
+                "arn:aws:kms:us-east-1:<account_id>:key/<key_id>"
+            ]
+        }
+    ]
+}
 ```
 
 ### EC2 Setup Steps
